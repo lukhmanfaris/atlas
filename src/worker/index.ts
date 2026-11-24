@@ -1,8 +1,10 @@
 import { Hono } from "hono";
 
-import type { AppEnv } from "@/worker/auth/middleware";
+import { requireIdentity, type AppEnv } from "@/worker/auth/middleware";
+import { requireUser } from "@/worker/auth/user";
 import { apiError } from "@/worker/errors";
 
+import { companyRoutes } from "./routes/companies";
 import { meRoutes } from "./routes/me";
 import { memberRoutes } from "./routes/members";
 
@@ -12,7 +14,13 @@ app.get("/api/health", (c) => c.json({ ok: true }));
 
 app.route("/api/me", meRoutes);
 
-// Company-scoped routes; the company comes from the X-Company-Id header.
+// Everything under /api/companies needs a verified Access token mapped to an
+// app user. Company membership is checked per route, either from the
+// X-Company-Id header or the :companyId URL parameter.
+app.use("/api/companies", requireIdentity, requireUser);
+app.use("/api/companies/*", requireIdentity, requireUser);
+
+app.route("/api/companies", companyRoutes);
 app.route("/api/companies", memberRoutes);
 
 app.notFound((c) => apiError(c, 404, "not_found", "Not found."));

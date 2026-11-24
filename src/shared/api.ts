@@ -38,6 +38,7 @@ export const meCompanySchema = z.strictObject({
   id: z.string(),
   name: z.string(),
   role: companyRoleSchema,
+  logoR2Key: z.string().nullable(),
 });
 
 /**

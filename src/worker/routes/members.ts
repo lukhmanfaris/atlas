@@ -6,8 +6,7 @@ import type { ZodError } from "zod";
 import { addMemberSchema, updateMemberSchema, type Member, type MemberList } from "@/shared/members";
 
 import { requireCompany, requireOwner } from "@/worker/auth/company";
-import { requireIdentity, type AppEnv } from "@/worker/auth/middleware";
-import { requireUser } from "@/worker/auth/user";
+import type { AppEnv } from "@/worker/auth/middleware";
 import { createDb } from "@/worker/db/client";
 import {
   countOwners,
@@ -22,8 +21,8 @@ import { auditValues } from "@/worker/services/audit";
 
 export const memberRoutes = new Hono<AppEnv>();
 
-// Member management is owner-only (spec.json -> roles).
-memberRoutes.use("*", requireIdentity, requireUser, requireCompany, requireOwner);
+// Member management is owner-only (spec.json -> roles). Identity is applied
+// once for /api/companies/* in src/worker/index.ts.
 
 type MemberRow = {
   userId: string;
@@ -75,7 +74,7 @@ function defaultName(email: string): string {
   return email.split("@")[0] ?? email;
 }
 
-memberRoutes.get("/:companyId/members", async (c) => {
+memberRoutes.get("/:companyId/members", requireCompany, requireOwner, async (c) => {
   const mismatch = companyMismatch(c);
   if (mismatch) return mismatch;
 
@@ -83,7 +82,7 @@ memberRoutes.get("/:companyId/members", async (c) => {
   return c.json({ members: rows.map(toMember) } satisfies MemberList);
 });
 
-memberRoutes.post("/:companyId/members", async (c) => {
+memberRoutes.post("/:companyId/members", requireCompany, requireOwner, async (c) => {
   const mismatch = companyMismatch(c);
   if (mismatch) return mismatch;
 
@@ -143,7 +142,7 @@ memberRoutes.post("/:companyId/members", async (c) => {
   return c.json({ member: toMember(member) }, 201);
 });
 
-memberRoutes.patch("/:companyId/members/:userId", async (c) => {
+memberRoutes.patch("/:companyId/members/:userId", requireCompany, requireOwner, async (c) => {
   const mismatch = companyMismatch(c);
   if (mismatch) return mismatch;
 

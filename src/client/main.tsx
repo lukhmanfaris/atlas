@@ -4,6 +4,9 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
 
 import { App } from "./App";
+import { CompanyProvider } from "./company";
+import { HomePage } from "./pages/home";
+import { SettingsPage } from "./pages/settings";
 import "./styles.css";
 
 const queryClient = new QueryClient({
@@ -16,6 +19,10 @@ const router = createBrowserRouter([
   {
     path: "/",
     element: <App />,
+    children: [
+      { index: true, element: <HomePage /> },
+      { path: "settings", element: <SettingsPage /> },
+    ],
   },
 ]);
 
@@ -27,7 +34,9 @@ if (!container) {
 createRoot(container).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <CompanyProvider>
+        <RouterProvider router={router} />
+      </CompanyProvider>
     </QueryClientProvider>
   </StrictMode>,
 );

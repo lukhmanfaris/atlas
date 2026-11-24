@@ -16,6 +16,7 @@ export async function listCompaniesForUser(db: Db, userId: string) {
       id: companies.id,
       name: companies.name,
       role: companyMembers.role,
+      logoR2Key: companies.logoR2Key,
     })
     .from(companyMembers)
     .innerJoin(companies, eq(companies.id, companyMembers.companyId))

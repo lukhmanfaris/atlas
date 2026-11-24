@@ -514,7 +514,7 @@
       "title": "Company profiles, logo and switcher",
       "milestone": "M1",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-01"],
       "acceptance_criteria": [
         "The owner can create several companies and edit every field in the companies entity.",
