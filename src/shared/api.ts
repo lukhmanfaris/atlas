@@ -23,6 +23,7 @@ export const apiErrorCodes = {
   notFound: "not_found",
   invalidState: "invalid_state",
   conflict: "conflict",
+  unavailable: "unavailable",
   internal: "internal_error",
 } as const;
 

@@ -1,0 +1,110 @@
+import { Hono } from "hono";
+
+import { requireCompany } from "@/worker/auth/company";
+import type { AppEnv } from "@/worker/auth/middleware";
+import { apiError } from "@/worker/errors";
+import { renderDocumentHtml } from "@/worker/pdf";
+import { loadDocument } from "@/worker/services/documents";
+import {
+  ensureStoredPdf,
+  ensureVoidPdf,
+  puppeteerRenderer,
+  renderUnstoredPdf,
+  type PdfDeps,
+} from "@/worker/services/pdf";
+
+export const documentPdfRoutes = new Hono<AppEnv>();
+
+function deps(c: { env: Env }): PdfDeps {
+  return { d1: c.env.DB, r2: c.env.FILES, render: puppeteerRenderer(c.env) };
+}
+
+/** HTML preview. The same template feeds the PDF, so they cannot drift apart. */
+documentPdfRoutes.get("/:documentId/preview", requireCompany, async (c) => {
+  const loaded = await loadDocument(
+    c.env.DB,
+    c.env.FILES,
+    c.get("company").id,
+    c.req.param("documentId"),
+  );
+
+  if (!loaded) {
+    return apiError(c, 404, "not_found", "Document not found.");
+  }
+
+  return c.html(renderDocumentHtml(loaded.model));
+});
+
+documentPdfRoutes.get("/:documentId/pdf", requireCompany, async (c) => {
+  const companyId = c.get("company").id;
+  const documentId = c.req.param("documentId");
+
+  const loaded = await loadDocument(c.env.DB, c.env.FILES, companyId, documentId);
+  if (!loaded) {
+    return apiError(c, 404, "not_found", "Document not found.");
+  }
+
+  const pdfDeps = deps(c);
+
+  // Drafts get a fresh preview with a DRAFT watermark and are never stored.
+  if (loaded.row.status === "draft") {
+    try {
+      const bytes = await renderUnstoredPdf(pdfDeps, { companyId, documentId });
+      if (!bytes) {
+        return apiError(c, 404, "not_found", "Document not found.");
+      }
+      return pdfResponse(bytes, `${loaded.model.number ?? "draft"}.pdf`, false);
+    } catch {
+      return pdfRetryable(c);
+    }
+  }
+
+  try {
+    const stored =
+      loaded.row.status === "void"
+        ? await ensureVoidPdf(pdfDeps, { companyId, documentId })
+        : await ensureStoredPdf(pdfDeps, { companyId, documentId });
+
+    if (!stored) {
+      return apiError(c, 404, "not_found", "Document not found.");
+    }
+
+    const object = await c.env.FILES.get(stored.key);
+    if (!object) {
+      throw new Error("Stored PDF missing from R2");
+    }
+
+    return new Response(object.body, {
+      headers: {
+        "content-type": "application/pdf",
+        "content-disposition": `inline; filename="${loaded.model.number ?? "document"}.pdf"`,
+        "cache-control": "private, max-age=300",
+      },
+    });
+  } catch {
+    return pdfRetryable(c);
+  }
+});
+
+function pdfResponse(bytes: Uint8Array, filename: string, cache: boolean) {
+  return new Response(bytes, {
+    headers: {
+      "content-type": "application/pdf",
+      "content-disposition": `inline; filename="${filename}"`,
+      "cache-control": cache ? "private, max-age=300" : "no-store",
+    },
+  });
+}
+
+/**
+ * Browser Run being down must not look like a broken app: issuing already
+ * succeeded, so the download can simply be retried (F-06 acceptance criteria).
+ */
+function pdfRetryable(c: Parameters<typeof apiError>[0]) {
+  return apiError(
+    c,
+    503,
+    "unavailable",
+    "The PDF could not be prepared just now. Please try again in a moment.",
+  );
+}

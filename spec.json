@@ -571,7 +571,7 @@
       "title": "PDF generation and archive",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-02"],
       "acceptance_criteria": [
         "Each document type renders to an A4 PDF matching pdf_layouts, with the company logo, and a 30-line document flows onto a second page with the table header repeated.",
