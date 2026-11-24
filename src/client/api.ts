@@ -162,13 +162,25 @@ import type {
 
 export function listQuotations(
   companyId: string,
-  options: { status?: string; q?: string; type?: "quotation" | "invoice" | "delivery_order" } = {},
+  options: {
+    status?: string;
+    q?: string;
+    type?: "quotation" | "invoice" | "delivery_order";
+    customerId?: string;
+    from?: string;
+    to?: string;
+    page?: number;
+  } = {},
 ) {
   const params = new URLSearchParams({ type: options.type ?? "quotation" });
   if (options.status) params.set("status", options.status);
   if (options.q) params.set("q", options.q);
+  if (options.customerId) params.set("customer_id", options.customerId);
+  if (options.from) params.set("from", options.from);
+  if (options.to) params.set("to", options.to);
+  if (options.page && options.page > 1) params.set("page", String(options.page));
 
-  return request<{ documents: DocumentListRow[] }>(
+  return request<{ documents: DocumentListRow[]; page: number; hasMore: boolean }>(
     `/documents?${params.toString()}`,
     {},
     companyId,
@@ -280,4 +292,37 @@ export function markPaid(
     { method: "POST", body: JSON.stringify(input) },
     companyId,
   );
+}
+
+export type DashboardData = {
+  drafts: {
+    id: string;
+    type: "quotation" | "invoice";
+    number: string | null;
+    customerName: string;
+    totalSen: number;
+    issueDate: string;
+    updatedAt: number;
+  }[];
+  latest: {
+    id: string;
+    type: "quotation" | "invoice";
+    number: string | null;
+    customerName: string;
+    totalSen: number;
+    issueDate: string;
+    status: string;
+  }[];
+  awaitingDelivery: {
+    id: string;
+    number: string | null;
+    customerName: string;
+    totalSen: number;
+    issueDate: string;
+    remainingLines: number;
+  }[];
+};
+
+export function getDashboard(companyId: string) {
+  return request<DashboardData>("/documents/dashboard", {}, companyId);
 }

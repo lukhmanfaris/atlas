@@ -1,4 +1,4 @@
-import { and, desc, eq, like, or } from "drizzle-orm";
+import { and, desc, eq, gte, like, lte, or } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
 import type { DocumentLineInput } from "@/shared/documents";
@@ -203,8 +203,14 @@ export type ListFilters = {
   type: DocumentType;
   status?: string;
   q?: string;
+  customerId?: string;
+  from?: string;
+  to?: string;
+  offset?: number;
   limit?: number;
 };
+
+export const LIST_PAGE_SIZE = 50;
 
 export async function listDocuments(db: Db, companyId: string, filters: ListFilters) {
   const conditions = [
@@ -214,6 +220,18 @@ export async function listDocuments(db: Db, companyId: string, filters: ListFilt
 
   if (filters.status) {
     conditions.push(eq(documents.status, filters.status));
+  }
+
+  if (filters.customerId) {
+    conditions.push(eq(documents.customerId, filters.customerId));
+  }
+
+  if (filters.from) {
+    conditions.push(gte(documents.issueDate, filters.from));
+  }
+
+  if (filters.to) {
+    conditions.push(lte(documents.issueDate, filters.to));
   }
 
   const term = filters.q?.replace(/[%_]/g, "").trim();
@@ -244,5 +262,6 @@ export async function listDocuments(db: Db, companyId: string, filters: ListFilt
     .innerJoin(customers, eq(customers.id, documents.customerId))
     .where(and(...conditions))
     .orderBy(desc(documents.createdAt))
-    .limit(filters.limit ?? 50);
+    .offset(filters.offset ?? 0)
+    .limit((filters.limit ?? LIST_PAGE_SIZE) + 1);
 }

@@ -1,39 +1,29 @@
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Plus, Receipt } from "lucide-react";
+import { FileText, Plus, Receipt, Truck } from "lucide-react";
 import { Link } from "react-router";
 
 import { Badge } from "@/client/components/ui/badge";
 import { Button } from "@/client/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/client/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/client/components/ui/table";
 import { formatRinggit } from "@/shared/items";
 
-import { listQuotations } from "../api";
+import { getDashboard } from "../api";
 import { useCompany } from "../company";
+
+function basePath(type: "quotation" | "invoice") {
+  return type === "invoice" ? "/invoices" : "/quotations";
+}
 
 export function HomePage() {
   const { company } = useCompany();
-
-  const quotations = useQuery({
-    queryKey: ["home", "quotations", company.id],
-    queryFn: () => listQuotations(company.id, { type: "quotation" }),
-  });
-  const invoices = useQuery({
-    queryKey: ["home", "invoices", company.id],
-    queryFn: () => listQuotations(company.id, { type: "invoice" }),
+  const dashboard = useQuery({
+    queryKey: ["dashboard", company.id],
+    queryFn: () => getDashboard(company.id),
   });
 
-  const recent = [...(quotations.data?.documents ?? []), ...(invoices.data?.documents ?? [])]
-    .filter((row) => row.status === "issued" || row.status === "accepted")
-    .sort((a, b) => b.issueDate.localeCompare(a.issueDate))
-    .slice(0, 5);
+  const drafts = dashboard.data?.drafts ?? [];
+  const latest = dashboard.data?.latest ?? [];
+  const awaiting = dashboard.data?.awaitingDelivery ?? [];
 
   return (
     <div className="space-y-6">
@@ -75,57 +65,104 @@ export function HomePage() {
         </Card>
       </section>
 
+      {dashboard.isError ? (
+        <p className="text-sm text-destructive">{dashboard.error.message}</p>
+      ) : null}
+
       <Card>
         <CardHeader className="border-b">
-          <CardTitle className="text-base">Recent</CardTitle>
+          <CardTitle className="text-base">Drafts to finish</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
-          {quotations.isError || invoices.isError ? (
-            <p className="p-4 text-sm text-destructive">Could not load recent documents.</p>
-          ) : recent.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">
-              Nothing issued yet. Create a quotation or invoice to get started.
-            </p>
+          {drafts.length === 0 ? (
+            <p className="p-4 text-sm text-muted-foreground">No drafts waiting.</p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Number</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead className="hidden sm:table-cell">Date</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recent.map((row) => {
-                  const base = row.number?.startsWith("INV") ? "/invoices" : "/quotations";
-                  return (
-                    <TableRow key={`${base}-${row.id}`}>
-                      <TableCell>
-                        <Link
-                          to={`${base}/${row.id}`}
-                          className="font-medium underline-offset-4 hover:underline"
-                        >
-                          {row.number}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="max-w-56 whitespace-normal">{row.customerName}</TableCell>
-                      <TableCell className="hidden sm:table-cell">{row.issueDate}</TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {formatRinggit(row.totalSen)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary">{row.status}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <ul className="divide-y">
+              {drafts.map((row) => (
+                <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                  <Link
+                    to={`${basePath(row.type)}/${row.id}`}
+                    className="min-w-0 truncate underline-offset-4 hover:underline"
+                  >
+                    <Badge variant="outline" className="mr-2 capitalize">
+                      {row.type}
+                    </Badge>
+                    {row.customerName}
+                  </Link>
+                  <span className="whitespace-nowrap text-sm tabular-nums">
+                    {formatRinggit(row.totalSen)}
+                  </span>
+                </li>
+              ))}
+            </ul>
           )}
         </CardContent>
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle className="text-base">Latest issued</CardTitle>
+          </CardHeader>
+          <CardContent className="px-0">
+            {latest.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">Nothing issued yet.</p>
+            ) : (
+              <ul className="divide-y">
+                {latest.map((row) => (
+                  <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <Link
+                      to={`${basePath(row.type)}/${row.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {row.number}
+                    </Link>
+                    <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                      {row.customerName}
+                    </span>
+                    <span className="whitespace-nowrap text-sm tabular-nums">
+                      {formatRinggit(row.totalSen)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="border-b">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Truck className="size-4" />
+              Awaiting delivery
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="px-0">
+            {awaiting.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">Every invoice is fully delivered.</p>
+            ) : (
+              <ul className="divide-y">
+                {awaiting.map((row) => (
+                  <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <Link
+                      to={`/invoices/${row.id}`}
+                      className="font-medium underline-offset-4 hover:underline"
+                    >
+                      {row.number}
+                    </Link>
+                    <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+                      {row.customerName}
+                    </span>
+                    <Badge variant="secondary">
+                      {row.remainingLines} {row.remainingLines === 1 ? "line" : "lines"} left
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -23,6 +23,7 @@ import {
   findDocument,
   findLines,
   listDocuments,
+  LIST_PAGE_SIZE,
   replaceLines,
   toTotalsLines,
   updateDraftHeader,
@@ -219,13 +220,75 @@ documentRoutes.get("/", requireCompany, async (c) => {
     return apiError(c, 400, "validation_error", "Unknown document type.");
   }
 
+  const page = Math.max(1, Number(c.req.query("page") ?? "1") || 1);
   const rows = await listDocuments(createDb(c.env.DB), c.get("company").id, {
     type,
     status: c.req.query("status")?.trim() || undefined,
     q: c.req.query("q")?.trim() || undefined,
+    customerId: c.req.query("customer_id")?.trim() || undefined,
+    from: c.req.query("from")?.trim() || undefined,
+    to: c.req.query("to")?.trim() || undefined,
+    offset: (page - 1) * LIST_PAGE_SIZE,
   });
 
-  return c.json({ documents: rows.map(withExpired) });
+  const hasMore = rows.length > LIST_PAGE_SIZE;
+  return c.json({
+    documents: rows.slice(0, LIST_PAGE_SIZE).map(withExpired),
+    page,
+    hasMore,
+  });
+});
+
+documentRoutes.get("/dashboard", requireCompany, async (c) => {
+  const companyId = c.get("company").id;
+
+  const [drafts, latest, awaiting] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT d.id, d.type, d.number, c.name AS customerName, d.total_sen AS totalSen,
+              d.issue_date AS issueDate, d.updated_at AS updatedAt
+       FROM documents d JOIN customers c ON c.id = d.customer_id
+       WHERE d.company_id = ? AND d.status = 'draft'
+       ORDER BY d.updated_at DESC LIMIT 10`,
+    )
+      .bind(companyId)
+      .all(),
+    c.env.DB.prepare(
+      `SELECT d.id, d.type, d.number, c.name AS customerName, d.total_sen AS totalSen,
+              d.issue_date AS issueDate, d.status
+       FROM documents d JOIN customers c ON c.id = d.customer_id
+       WHERE d.company_id = ? AND d.status IN ('issued', 'accepted')
+       ORDER BY d.issue_date DESC, d.created_at DESC LIMIT 10`,
+    )
+      .bind(companyId)
+      .all(),
+    c.env.DB.prepare(
+      `SELECT * FROM (
+         SELECT d.id, d.number, c.name AS customerName, d.total_sen AS totalSen,
+                d.issue_date AS issueDate,
+                (SELECT COUNT(*) FROM document_lines il
+                 WHERE il.document_id = d.id
+                   AND il.quantity_milli > COALESCE((
+                     SELECT SUM(dl.quantity_milli)
+                     FROM document_lines dl
+                     JOIN documents dd ON dd.id = dl.document_id
+                     WHERE dl.source_line_id = il.id
+                       AND dd.type = 'delivery_order'
+                       AND dd.status != 'void'
+                   ), 0)) AS remainingLines
+         FROM documents d JOIN customers c ON c.id = d.customer_id
+         WHERE d.company_id = ? AND d.type = 'invoice' AND d.status = 'issued'
+       ) WHERE remainingLines > 0
+       ORDER BY issueDate ASC LIMIT 10`,
+    )
+      .bind(companyId)
+      .all(),
+  ]);
+
+  return c.json({
+    drafts: drafts.results ?? [],
+    latest: latest.results ?? [],
+    awaitingDelivery: awaiting.results ?? [],
+  });
 });
 
 documentRoutes.post("/", requireCompany, async (c) => {

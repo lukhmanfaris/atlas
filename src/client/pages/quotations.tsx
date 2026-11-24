@@ -24,7 +24,7 @@ import {
 } from "@/client/components/ui/table";
 import { formatRinggit } from "@/shared/items";
 
-import { listQuotations } from "../api";
+import { listCustomers, listQuotations } from "../api";
 import { useCompany } from "../company";
 
 const STATUSES = [
@@ -58,14 +58,27 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
   const { company } = useCompany();
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
+  const [customerId, setCustomerId] = useState("all");
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [page, setPage] = useState(1);
+
+  const customers = useQuery({
+    queryKey: ["customers", company.id, "picker"],
+    queryFn: () => listCustomers(company.id, {}),
+  });
 
   const quotations = useQuery({
-    queryKey: ["quotations", documentType, company.id, status, q],
+    queryKey: ["quotations", documentType, company.id, status, q, customerId, from, to, page],
     queryFn: () =>
       listQuotations(company.id, {
         type: documentType,
         status: status === "all" ? undefined : status,
         q: q || undefined,
+        customerId: customerId === "all" ? undefined : customerId,
+        from: from || undefined,
+        to: to || undefined,
+        page,
       }),
   });
 
@@ -97,11 +110,63 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
               className="max-w-xs"
               placeholder="Search number or customer"
               value={q}
-              onChange={(event) => setQ(event.target.value)}
+              onChange={(event) => {
+                setQ(event.target.value);
+                setPage(1);
+              }}
+            />
+            <Select
+              value={customerId}
+              onValueChange={(value) => {
+                setCustomerId(value ?? "all");
+                setPage(1);
+              }}
+              items={[
+                { value: "all", label: "All customers" },
+                ...(customers.data?.customers ?? []).map((customer) => ({
+                  value: customer.id,
+                  label: customer.name,
+                })),
+              ]}
+            >
+              <SelectTrigger className="w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All customers</SelectItem>
+                {(customers.data?.customers ?? []).map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              type="date"
+              aria-label="From date"
+              className="w-40"
+              value={from}
+              onChange={(event) => {
+                setFrom(event.target.value);
+                setPage(1);
+              }}
+            />
+            <Input
+              type="date"
+              aria-label="To date"
+              className="w-40"
+              value={to}
+              onChange={(event) => {
+                setTo(event.target.value);
+                setPage(1);
+              }}
             />
             <Select
               value={status}
-              onValueChange={(value) => setStatus(value ?? "all")}
+              onValueChange={(value) => {
+                setStatus(value ?? "all");
+                setPage(1);
+              }}
               items={STATUSES}
             >
               <SelectTrigger className="w-44">
@@ -166,6 +231,26 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
             </Table>
           )}
         </CardContent>
+
+        <div className="flex items-center justify-between border-t px-4 py-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={page === 1}
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+          >
+            Previous
+          </Button>
+          <span className="text-xs text-muted-foreground">Page {page}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={!quotations.data?.hasMore}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            Next
+          </Button>
+        </div>
       </Card>
     </div>
   );
