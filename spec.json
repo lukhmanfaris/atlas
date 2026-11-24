@@ -661,7 +661,7 @@
       "title": "Audit log",
       "milestone": "M3",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-07", "F-08", "F-10"],
       "acceptance_criteria": [
         "Issue, void, accept, reject, convert, mark delivered, company setting changes and member changes write an audit_log row in the same batch as the change.",
