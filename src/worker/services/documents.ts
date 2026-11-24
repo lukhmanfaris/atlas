@@ -11,6 +11,7 @@ export type CompanySnapshot = {
   bankName: string | null;
   bankAccountName: string | null;
   bankAccountNo: string | null;
+  paymentInstructions: string | null;
   sstRegistered: boolean;
 };
 
@@ -82,7 +83,7 @@ async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySn
     .prepare(
       `SELECT name, registration_no, address_line1, address_line2, address_line3, postcode,
               city, state, country, phone, email, logo_r2_key, brand_color, bank_name,
-              bank_account_name, bank_account_no, sst_registered
+              bank_account_name, bank_account_no, payment_instructions, sst_registered
        FROM companies WHERE id = ?`,
     )
     .bind(companyId)
@@ -112,6 +113,7 @@ async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySn
     bankName: row.bank_name ? String(row.bank_name) : null,
     bankAccountName: row.bank_account_name ? String(row.bank_account_name) : null,
     bankAccountNo: row.bank_account_no ? String(row.bank_account_no) : null,
+    paymentInstructions: row.payment_instructions ? String(row.payment_instructions) : null,
     sstRegistered: Number(row.sst_registered) === 1,
   };
 }

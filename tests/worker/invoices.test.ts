@@ -183,3 +183,66 @@ describe("invoices", () => {
     expect(quotations.documents).toHaveLength(1);
   });
 });
+
+describe("mark as paid", () => {
+  it("records a chosen date and can be undone", async () => {
+    const { email, companyId, customerId } = await setup();
+    const created = await createInvoice(email, companyId, customerId);
+    const { document } = (await created.json()) as { document: { id: string } };
+    await issueDocument(email, companyId, document.id);
+
+    const paid = await call(`/api/documents/${document.id}/mark-paid`, {
+      as: email,
+      companyId,
+      method: "POST",
+      body: { paid: true, paidOn: "2026-11-20" },
+    });
+
+    expect(paid.status).toBe(200);
+    expect(
+      ((await paid.json()) as { document: { paidAt: number } }).document.paidAt,
+    ).toBe(Date.parse("2026-11-20T00:00:00+08:00"));
+
+    const unpaid = await call(`/api/documents/${document.id}/mark-paid`, {
+      as: email,
+      companyId,
+      method: "POST",
+      body: { paid: false },
+    });
+    expect(((await unpaid.json()) as { document: { paidAt: number | null } }).document.paidAt).toBeNull();
+  });
+
+  it("refuses drafts and non-invoices", async () => {
+    const { email, companyId, customerId } = await setup();
+    const draft = await createInvoice(email, companyId, customerId);
+    const { document } = (await draft.json()) as { document: { id: string } };
+
+    const response = await call(`/api/documents/${document.id}/mark-paid`, {
+      as: email,
+      companyId,
+      method: "POST",
+      body: { paid: true },
+    });
+    expect(response.status).toBe(409);
+  });
+
+  it("lets staff mark an issued invoice paid", async () => {
+    const email = await uniqueEmail("staff");
+    const userId = await seedUser(email);
+    const companyId = await seedCompany("Gamma Sdn Bhd");
+    await seedMembership(companyId, userId, "staff");
+    const customerId = await seedCustomer(companyId);
+
+    const created = await createInvoice(email, companyId, customerId);
+    const { document } = (await created.json()) as { document: { id: string } };
+    await issueDocument(email, companyId, document.id);
+
+    const paid = await call(`/api/documents/${document.id}/mark-paid`, {
+      as: email,
+      companyId,
+      method: "POST",
+      body: { paid: true },
+    });
+    expect(paid.status).toBe(200);
+  });
+});

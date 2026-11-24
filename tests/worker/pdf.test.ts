@@ -22,6 +22,7 @@ const COMPANY_SNAPSHOT = {
   bankAccountName: "Atlas Trading Sdn Bhd",
   bankAccountNo: "5140 1234 5678",
   sstRegistered: false,
+  paymentInstructions: null,
 };
 
 const CUSTOMER_SNAPSHOT = {
@@ -104,6 +105,21 @@ describe("document templates", () => {
 
     expect(html).toContain("DRAFT");
     expect(html).toContain("not yet issued");
+  });
+
+  it("prints payment instructions under the bank details", () => {
+    const html = renderDocumentHtml(
+      model({
+        company: {
+          ...COMPANY_SNAPSHOT,
+          logoUrl: null,
+          paymentInstructions: "DuitNow to 5140 1234 5678, ref the invoice number.",
+        },
+      }),
+    ).toString();
+
+    expect(html).toContain("Payment details");
+    expect(html).toContain("DuitNow to 5140 1234 5678");
   });
 
   it("watermarks a void copy", () => {

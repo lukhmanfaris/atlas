@@ -174,6 +174,7 @@
         { "name": "quotation_terms", "type": "text", "notes": "Default terms printed on quotations" },
         { "name": "invoice_notes", "type": "text", "notes": "Default notes printed on invoices, e.g. payment instructions" },
         { "name": "delivery_order_notes", "type": "text" },
+        { "name": "payment_instructions", "type": "text", "notes": "Printed on invoices under the bank details" },
         { "name": "sst_registered", "type": "integer", "required": true, "default": 0, "notes": "Boolean. 0 for all companies in v1" },
         { "name": "sst_no", "type": "text", "notes": "Reserved for future SST registration" },
         { "name": "tin", "type": "text", "notes": "Reserved for future MyInvois" },
@@ -276,6 +277,7 @@
         { "name": "driver_name", "type": "text", "notes": "Delivery order only, optional" },
         { "name": "delivered_at", "type": "integer", "notes": "Delivery order only" },
         { "name": "received_by", "type": "text", "notes": "Delivery order only: name of the person who received the goods" },
+        { "name": "paid_at", "type": "integer", "notes": "Set when an invoice is marked paid, on the date staff choose; null when unpaid" },
         { "name": "pdf_r2_key", "type": "text", "notes": "Set at issue" },
         { "name": "pdf_sha256", "type": "text", "notes": "Set at issue" },
         { "name": "void_pdf_r2_key", "type": "text", "notes": "Copy of the PDF with a VOID watermark" },
@@ -691,6 +693,20 @@
         "The owner can export documents of a type and date range as CSV with number, date, customer, status and total in RM.",
         "The file opens correctly in Excel with Malaysian dates and two-decimal amounts."
       ]
+    },
+    {
+      "id": "F-15",
+      "title": "Mark an invoice paid",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "done",
+      "depends_on": ["F-08"],
+      "acceptance_criteria": [
+        "Staff and owners can mark an issued invoice paid, choosing the date it was paid.",
+        "The paid date is stored on the document and shown as a paid badge in lists and on the invoice.",
+        "Marking paid can be undone, and only invoices that are issued can be marked.",
+        "Each change writes an audit_log row."
+      ]
     }
   ],
 
@@ -716,7 +732,7 @@
   },
 
   "out_of_scope": [
-    "Payment tracking and receipts",
+    "Payment ledger, partial payments, overpayments and receipts (v1 only marks an invoice paid on a date)",
     "Expenses and profit-and-loss reports",
     "Sending email from the app",
     "Upload of customer-signed delivery orders",
@@ -746,6 +762,7 @@
     { "date": "2026-11-24", "decision": "Documents have no reference field", "why": "The owner does not use customer PO numbers; the field was removed from the data model, the API, the PDFs and the editor" },
     { "date": "2026-11-24", "decision": "Quotations have no manual accept or reject step", "why": "Nothing gates on acceptance, and converting to an invoice already implies it. Statuses are draft, issued, void, with accepted set only by conversion" },
     { "date": "2026-11-24", "decision": "Items live under Settings, not in the bottom bar", "why": "The catalogue is set up rarely; the bar stays short: Home, Quotes, Settings, with Invoices added in F-08" },
-    { "date": "2026-11-24", "decision": "A document can be created from a typed customer name instead of picking one", "why": "Staff know the buyer's name before they have a customer record. The name is matched case-insensitively, reused when it matches exactly, and otherwise a customer is created when the draft is first saved" }
+    { "date": "2026-11-24", "decision": "A document can be created from a typed customer name instead of picking one", "why": "Staff know the buyer's name before they have a customer record. The name is matched case-insensitively, reused when it matches exactly, and otherwise a customer is created when the draft is first saved" },
+    { "date": "2026-11-25", "decision": "v1 marks an invoice paid with a chosen date; a payments ledger is deferred", "why": "The owner needs a simple paid marker now. Partial payments, methods and balances need a payments table, which changes the data model and the invoice totals story, so it stays in the next phase" }
   ]
 }

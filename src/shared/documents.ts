@@ -111,6 +111,7 @@ export type DocumentDto = {
   pdfR2Key: string | null;
   voidPdfR2Key: string | null;
   voidReason: string | null;
+  paidAt: number | null;
   sourceDocumentId: string | null;
   sourceNumber?: string | null;
   linkedInvoices?: { id: string; number: string | null; status: string }[];
@@ -127,8 +128,16 @@ export type DocumentListRow = {
   dueDate: string | null;
   totalSen: number;
   customerName: string;
+  paidAt: number | null;
   expired: boolean;
 };
+
+export const markPaidSchema = z.strictObject({
+  paid: z.boolean(),
+  paidOn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD").optional(),
+});
+
+export type MarkPaidInput = z.infer<typeof markPaidSchema>;
 
 export const markDeliveredSchema = z.strictObject({
   deliveredAt: z.number().int().positive().optional(),

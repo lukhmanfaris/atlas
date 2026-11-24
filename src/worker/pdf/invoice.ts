@@ -53,6 +53,9 @@ export function renderInvoice(model: PdfModel) {
             <p>${[model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
               .filter(Boolean)
               .join("\n")}</p>
+            ${model.company.paymentInstructions
+              ? html`<p style="margin-top:2mm">${model.company.paymentInstructions}</p>`
+              : ""}
           </section>`
         : ""}
       ${model.notes

@@ -269,3 +269,15 @@ export function markDelivered(companyId: string, documentId: string, receivedBy:
     companyId,
   );
 }
+
+export function markPaid(
+  companyId: string,
+  documentId: string,
+  input: { paid: boolean; paidOn?: string },
+) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/mark-paid`,
+    { method: "POST", body: JSON.stringify(input) },
+    companyId,
+  );
+}

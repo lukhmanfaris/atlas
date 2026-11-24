@@ -235,6 +235,7 @@ export async function listDocuments(db: Db, companyId: string, filters: ListFilt
       validUntil: documents.validUntil,
       dueDate: documents.dueDate,
       totalSen: documents.totalSen,
+      paidAt: documents.paidAt,
       customerId: documents.customerId,
       customerName: customers.name,
       createdAt: documents.createdAt,

@@ -28,6 +28,7 @@ import {
   createDeliveryOrder,
   getDeliveryRemaining,
   listCustomers,
+  markPaid,
   markDelivered as markDeliveredRequest,
   voidQuotation,
 } from "../api";
@@ -91,6 +92,13 @@ export function QuotationViewPage({
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
+  const togglePaid = useMutation({
+    mutationFn: (input: { paid: boolean; paidOn?: string }) =>
+      markPaid(company.id, documentId ?? "", input),
+    onSuccess: () => refresh(),
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
   const voidIt = useMutation({
     mutationFn: () => voidQuotation(company.id, documentId ?? "", reason),
     onSuccess: async () => {
@@ -146,6 +154,7 @@ export function QuotationViewPage({
               <Badge variant={document.expired ? "destructive" : "secondary"}>
                 {document.expired ? "expired" : document.status}
               </Badge>
+              {document.paidAt ? <Badge>paid</Badge> : null}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
               {customer?.name ?? "Customer"} · issued {document.issueDate}
@@ -211,6 +220,25 @@ export function QuotationViewPage({
                 (document.status === "issued" || document.status === "accepted") ? (
                   <Button size="sm" onClick={() => convert.mutate()} disabled={convert.isPending}>
                     {convert.isPending ? "Converting…" : "Convert to invoice"}
+                  </Button>
+                ) : null}
+                {document.type === "invoice" && document.status === "issued" ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      if (document.paidAt) {
+                        togglePaid.mutate({ paid: false });
+                        return;
+                      }
+                      const paidOn = window.prompt(
+                        "Paid on (YYYY-MM-DD)",
+                        new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 10),
+                      );
+                      if (paidOn) togglePaid.mutate({ paid: true, paidOn });
+                    }}
+                  >
+                    {document.paidAt ? "Mark unpaid" : "Mark paid"}
                   </Button>
                 ) : null}
                 {isDeliveryOrder && document.status === "issued" ? (

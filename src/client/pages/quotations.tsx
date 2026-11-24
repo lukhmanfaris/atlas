@@ -36,12 +36,17 @@ const STATUSES = [
   { value: "void", label: "Void" },
 ];
 
-function statusBadge(status: string, expired: boolean) {
+function statusBadge(status: string, expired: boolean, paidAt: number | null) {
   if (expired) {
     return <Badge variant="destructive">expired</Badge>;
   }
   if (status === "issued" || status === "accepted") {
-    return <Badge>{status}</Badge>;
+    return (
+      <span className="inline-flex gap-1">
+        <Badge>{status}</Badge>
+        {paidAt ? <Badge>paid</Badge> : null}
+      </span>
+    );
   }
   if (status === "draft") {
     return <Badge variant="secondary">draft</Badge>;
@@ -153,7 +158,7 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
                       {formatRinggit(row.totalSen)}
                     </TableCell>
                     <TableCell className="text-right">
-                      {statusBadge(row.status, row.expired)}
+                      {statusBadge(row.status, row.expired, row.paidAt)}
                     </TableCell>
                   </TableRow>
                 ))}

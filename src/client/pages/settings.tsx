@@ -28,6 +28,7 @@ function toForm(company: CompanyDto) {
     bankName: company.bankName ?? "",
     bankAccountName: company.bankAccountName ?? "",
     bankAccountNo: company.bankAccountNo ?? "",
+    paymentInstructions: company.paymentInstructions ?? "",
     defaultPaymentTermsDays: company.defaultPaymentTermsDays,
     quotationValidityDays: company.quotationValidityDays,
     prefixQuotation: company.prefixQuotation,
@@ -219,6 +220,17 @@ export function SettingsPage() {
         {text("bankName", "Bank")}
         {text("bankAccountName", "Account name")}
         {text("bankAccountNo", "Account number")}
+        <div className="sm:col-span-2">
+          <Field label="Payment instructions" hint="Printed on invoices under the bank details.">
+            <textarea
+              className={inputClass}
+              rows={3}
+              value={current.paymentInstructions}
+              onChange={(event) => set("paymentInstructions", event.target.value)}
+              disabled={!canEdit}
+            />
+          </Field>
+        </div>
       </section>
 
       <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2">

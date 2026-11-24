@@ -50,6 +50,7 @@ export const updateCompanySchema = z.strictObject({
   quotationTerms: nullableText(4000),
   invoiceNotes: nullableText(4000),
   deliveryOrderNotes: nullableText(4000),
+  paymentInstructions: nullableText(2000),
   sstRegistered: z.union([z.literal(0), z.literal(1)]).optional(),
   sstNo: nullableText(60),
   tin: nullableText(60),
@@ -86,6 +87,7 @@ export type CompanyDto = {
   quotationTerms: string | null;
   invoiceNotes: string | null;
   deliveryOrderNotes: string | null;
+  paymentInstructions: string | null;
   sstRegistered: boolean;
   sstNo: string | null;
   tin: string | null;

@@ -6,6 +6,7 @@ import type { ZodError } from "zod";
 import {
   createInvoiceSchema,
   markDeliveredSchema,
+  markPaidSchema,
   createQuotationSchema,
   type DocumentCustomerInput,
   updateQuotationSchema,
@@ -464,6 +465,56 @@ documentRoutes.post("/:documentId/delivery-orders", requireCompany, async (c) =>
 
   const body = await detail(c, created.id);
   return c.json({ document: body }, 201);
+});
+
+
+documentRoutes.post("/:documentId/mark-paid", requireCompany, async (c) => {
+  const parsed = markPaidSchema.safeParse(await readJson(c));
+  if (!parsed.success) {
+    return apiError(c, 400, "validation_error", "Choose whether the invoice is paid and on what date.");
+  }
+
+  const db = createDb(c.env.DB);
+  const companyId = c.get("company").id;
+  const documentId = c.req.param("documentId") ?? "";
+
+  const document = await findDocument(db, companyId, documentId);
+  if (!document) {
+    return apiError(c, 404, "not_found", "Document not found.");
+  }
+  if (document.type !== "invoice") {
+    return apiError(c, 409, "invalid_state", "Only an invoice can be marked paid.");
+  }
+  if (document.status !== "issued") {
+    return apiError(c, 409, "invalid_state", "Only an issued invoice can be marked paid.");
+  }
+
+  const paidAt = parsed.data.paid
+    ? parsed.data.paidOn
+      ? Date.parse(`${parsed.data.paidOn}T00:00:00+08:00`)
+      : Date.now()
+    : null;
+
+  const at = Date.now();
+  await db.batch([
+    db
+      .update(documents)
+      .set({ paidAt, updatedAt: at })
+      .where(and(eq(documents.companyId, companyId), eq(documents.id, documentId))),
+    db.insert(auditLog).values({
+      id: uuidv7(),
+      companyId,
+      userId: c.get("user").id,
+      action: parsed.data.paid ? "document.mark_paid" : "document.unpaid",
+      entity: "document",
+      entityId: documentId,
+      detail: parsed.data.paidOn ? JSON.stringify({ paidOn: parsed.data.paidOn }) : null,
+      at,
+    }),
+  ]);
+
+  const body = await detail(c, documentId);
+  return c.json({ document: body });
 });
 
 documentRoutes.post("/:documentId/mark-delivered", requireCompany, async (c) => {

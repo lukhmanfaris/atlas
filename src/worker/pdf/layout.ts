@@ -13,6 +13,7 @@ export type PdfCompany = {
   bankName?: string | null;
   bankAccountName?: string | null;
   bankAccountNo?: string | null;
+  paymentInstructions?: string | null;
   sstRegistered: boolean;
 };
 
