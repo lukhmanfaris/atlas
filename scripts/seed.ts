@@ -17,13 +17,17 @@ const companyB = "018f0000-0000-7000-8000-000000000002";
 const owner = "018f0000-0000-7000-8000-0000000000a1";
 const staff = "018f0000-0000-7000-8000-0000000000a2";
 
+// Must match the email the owner signs in with through Cloudflare Access,
+// because F-01 matches users.email against the Access token.
+const ownerEmail = "halfxindustries@gmail.com";
+
 function lines(...values: string[]): string {
   return values.join("\n");
 }
 
 const sql = lines(
   "INSERT OR IGNORE INTO users (id, email, name, is_active, created_at) VALUES",
-  `  ('${owner}', 'owner@example.com', 'Demo Owner', 1, ${now}),`,
+  `  ('${owner}', '${ownerEmail}', 'Demo Owner', 1, ${now}),`,
   `  ('${staff}', 'staff@example.com', 'Demo Staff', 1, ${now});`,
   "",
   "INSERT OR IGNORE INTO companies (id, name, registration_no, address_line1, postcode, city, state, country, phone, email, default_payment_terms_days, quotation_validity_days, prefix_quotation, prefix_invoice, prefix_delivery_order, sst_registered, is_archived, created_at, updated_at) VALUES",

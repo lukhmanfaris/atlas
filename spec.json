@@ -71,7 +71,7 @@
     "database": "Cloudflare D1 (SQLite), created with location hint \"apac\", read replication OFF",
     "orm": "Drizzle ORM with drizzle-kit generated SQL migrations",
     "file_storage": "Cloudflare R2: one private bucket for logos and issued PDFs, one private bucket for backups",
-    "auth": "Cloudflare Access (email one-time PIN) in front of the whole app; the Worker validates the Cf-Access-Jwt-Assertion header on every /api request",
+    "auth": "Cloudflare Access (email one-time PIN) in front of the whole app; the Worker validates the Cf-Access-Jwt-Assertion header on every /api request. v1 uses Worker-level Access on the workers.dev address, so no custom domain is needed",
     "pdf": "Server-rendered HTML templates (Hono JSX) converted to PDF by Cloudflare Browser Run through the Workers browser binding (@cloudflare/puppeteer)",
     "testing": "Vitest with @cloudflare/vitest-pool-workers for API and service tests; Playwright for a few end-to-end flows",
     "ci_cd": "GitHub Actions: check on every push, deploy to staging on main, deploy to production on a version tag",
@@ -491,7 +491,7 @@
         "The repository matches repo_layout, and `npm run dev`, `npm run check`, `npm run deploy:staging` work.",
         "Staging and production each have their own Worker, D1 database (location hint apac, read replication off) and R2 buckets.",
         "Opening the staging URL without passing Cloudflare Access shows the Access login; after login a 'Hello' page shows the user's email.",
-        "Calling /api/me without a valid Access JWT returns 401, even when requested through the workers.dev address, which is disabled.",
+        "Calling /api/me with an invalid or forged Access JWT returns 401, and a request with no Access session is stopped by Cloudflare Access before it reaches the Worker.",
         "GitHub Actions runs `npm run check` on every push and deploys staging from main."
       ]
     },
@@ -709,7 +709,7 @@
     "browser_support": "Latest Chrome, Edge, Safari and Firefox",
     "security": [
       "Validate the Access JWT signature, audience and expiry on every /api request",
-      "Disable the workers.dev route for production and staging",
+      "Protect each Worker's workers.dev address with Worker-level Cloudflare Access (no custom domain in v1)",
       "R2 buckets are private; files are served only through the Worker after a membership check",
       "Validate every request body with Zod; reject unknown fields",
       "Escape all user text in PDF templates"
@@ -741,6 +741,7 @@
     { "date": "2026-11-24", "decision": "Use Cloudflare D1 instead of Neon Postgres", "why": "Companies are not SST-registered and below the MyInvois threshold, PDPA impact is light, and one vendor is simpler for an AI-assisted build. Drizzle keeps a move to Postgres possible" },
     { "date": "2026-11-24", "decision": "v1 scope is quotations, invoices and delivery orders", "why": "These are the documents used every day; payments, expenses, email and MyInvois come later" },
     { "date": "2026-11-24", "decision": "Delivery orders are created from issued invoices, with partial deliveries", "why": "Matches the business's invoice-first workflow" },
-    { "date": "2026-11-24", "decision": "No SST and no foreign currency in v1", "why": "No company is SST-registered and all invoicing is in MYR" }
+    { "date": "2026-11-24", "decision": "No SST and no foreign currency in v1", "why": "No company is SST-registered and all invoicing is in MYR" },
+    { "date": "2026-11-24", "decision": "Use Worker-level Cloudflare Access on the workers.dev address instead of a custom domain", "why": "Workers-level Access protects the workers.dev hostname, routes and previews, so v1 needs no domain. The owner keeps the .my domain for a later move without changing the app" }
   ]
 }
