@@ -41,8 +41,8 @@
       // Real ids are filled in by `wrangler d1 create` / `wrangler r2 bucket create`.
       "vars": {
         "ENVIRONMENT": "staging",
-        "ACCESS_TEAM_DOMAIN": "",
-        "ACCESS_AUD": ""
+        "ACCESS_TEAM_DOMAIN": "https://atlas-docs.cloudflareaccess.com",
+        "ACCESS_AUD": "f794366b02b3c3b226103fd4f39d91691940e71632784ea24edeaf5e2cebe147"
       },
       "d1_databases": [
         {
