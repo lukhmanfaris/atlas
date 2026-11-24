@@ -340,16 +340,18 @@
   ],
 
   "numbering": {
-    "format": "{prefix}-{YYYY}-{seq:4}",
-    "examples": ["QT-2026-0001", "INV-2026-0042", "DO-2026-0007"],
+    "format": "{prefix}-{seq:4}",
+    "examples": ["QT-1001", "INV-1042", "DO-1007"],
     "rules": [
-      "One sequence per company, document type and calendar year. The year comes from issue_date in Malaysia time.",
+      "One sequence per company and document type. It starts at 1000 and never resets, not monthly and not yearly.",
+      "The number has no year or month; the date lives in issue_date and seq_year is still recorded for reporting.",
       "A number is assigned only when a draft is issued. Drafts have no number.",
       "Numbers are gap-free: deleting a draft never uses up a number, and a voided document keeps its number.",
       "seq grows past 9999 without breaking (it is padded to at least 4 digits).",
-      "Changing a prefix in settings affects only documents issued afterwards."
+      "Changing a prefix in settings affects only documents issued afterwards.",
+      "The number is a business convention, not a sales report: it starts high so low volume is not advertised. It stays consecutive and auditable."
     ],
-    "implementation": "D1 has no interactive transactions, so issue with one db.batch (which runs as a single transaction): (1) INSERT the sequence row if missing (INSERT OR IGNORE with next_value 1); (2) UPDATE number_sequences SET next_value = next_value + 1 WHERE company_id = ? AND doc_type = ? AND year = ? AND EXISTS (SELECT 1 FROM documents WHERE id = ? AND status = 'draft'); (3) UPDATE documents SET seq = (SELECT next_value - 1 FROM number_sequences WHERE ...), seq_year = ?, number = printf(...), status = 'issued', issued_at = ?, issued_by = ? WHERE id = ? AND status = 'draft'. Then verify the document now has a number; if not, return 409. Generate the PDF after the batch succeeds."
+    "implementation": "D1 has no interactive transactions, so issue with one db.batch (which runs as a single transaction): (1) INSERT the sequence row if missing (INSERT OR IGNORE with next_value 1000); (2) UPDATE number_sequences SET next_value = next_value + 1 WHERE company_id = ? AND doc_type = ? AND EXISTS (SELECT 1 FROM documents WHERE id = ? AND company_id = ? AND type = ? AND status = 'draft'); (3) UPDATE documents SET seq = (SELECT next_value - 1 FROM number_sequences WHERE company_id = ? AND doc_type = ?), seq_year = ?, number = (prefix || '-' || printf('%04d', seq)), status = 'issued', issued_at = ?, issued_by = ? WHERE id = ? AND status = 'draft'. Then verify the document now has a number; if not, return 409. Generate the PDF after the batch succeeds."
   },
 
   "state_machines": {
@@ -554,13 +556,13 @@
       "title": "Document numbering service",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-02"],
       "acceptance_criteria": [
-        "Issuing produces numbers in the numbering format, per company, type and year.",
+        "Issuing produces numbers in the numbering format, per company and type, starting at 1000.",
         "Issuing 20 drafts in parallel for the same company and type yields 20 consecutive numbers with no duplicates or gaps.",
         "Deleting a draft does not consume a number; a voided document keeps its number and the next issue gets the next value.",
-        "The first document issued with an issue_date in a new year gets 0001.",
+        "Numbers never reset: the first document of a new year continues from the previous number.",
         "Issuing a document that is not a draft returns 409 and does not change any sequence."
       ]
     },
@@ -742,6 +744,7 @@
     { "date": "2026-11-24", "decision": "v1 scope is quotations, invoices and delivery orders", "why": "These are the documents used every day; payments, expenses, email and MyInvois come later" },
     { "date": "2026-11-24", "decision": "Delivery orders are created from issued invoices, with partial deliveries", "why": "Matches the business's invoice-first workflow" },
     { "date": "2026-11-24", "decision": "No SST and no foreign currency in v1", "why": "No company is SST-registered and all invoicing is in MYR" },
-    { "date": "2026-11-24", "decision": "Use Worker-level Cloudflare Access on the workers.dev address instead of a custom domain", "why": "Workers-level Access protects the workers.dev hostname, routes and previews, so v1 needs no domain. The owner keeps the .my domain for a later move without changing the app" }
+    { "date": "2026-11-24", "decision": "Use Worker-level Cloudflare Access on the workers.dev address instead of a custom domain", "why": "Workers-level Access protects the workers.dev hostname, routes and previews, so v1 needs no domain. The owner keeps the .my domain for a later move without changing the app" },
+    { "date": "2026-11-24", "decision": "Document numbers are PREFIX-1042: no year, sequence starts at 1000 and never resets", "why": "The owner does not issue much volume and did not want numbers that advertise that. A high starting offset achieves it while staying consecutive and gap-free for accounting; random numbers were rejected because they would break gap-free numbering, ordering and explainability" }
   ]
 }

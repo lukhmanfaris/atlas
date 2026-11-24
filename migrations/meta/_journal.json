@@ -15,6 +15,13 @@
       "when": 1795521098316,
       "tag": "0001_useful_invaders",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1795523759110,
+      "tag": "0002_dusty_kitty_pryde",
+      "breakpoints": true
     }
   ]
 }

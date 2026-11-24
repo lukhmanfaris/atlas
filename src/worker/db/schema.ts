@@ -226,10 +226,10 @@ export const numberSequences = sqliteTable(
       .notNull()
       .references(() => companies.id),
     docType: text("doc_type", { enum: ["quotation", "invoice", "delivery_order"] }).notNull(),
-    year: integer("year").notNull(),
-    nextValue: integer("next_value").notNull().default(1),
+    // One continuous counter per company and type; it never resets.
+    nextValue: integer("next_value").notNull().default(1000),
   },
-  (table) => [primaryKey({ columns: [table.companyId, table.docType, table.year] })],
+  (table) => [primaryKey({ columns: [table.companyId, table.docType] })],
 );
 
 export const auditLog = sqliteTable(
