@@ -115,8 +115,8 @@ test("creates and issues a quotation", async ({ page }) => {
   await page.goto("/quotations");
   await page.getByRole("button", { name: /New quotation/ }).click();
 
-  await page.getByRole("combobox", { name: "Customer" }).click();
-  await page.getByRole("option").first().click();
+  await page.getByLabel("Customer").fill(`E2E Buyer ${Date.now()}`);
+  await page.getByLabel("Billing address").fill("1 Test Road\n50000 Kuala Lumpur");
 
   await page.getByLabel("Description").first().fill("A4 Copier Paper");
   await page.getByLabel("Qty").fill("2");

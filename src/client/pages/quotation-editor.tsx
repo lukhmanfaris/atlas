@@ -77,7 +77,8 @@ export function QuotationEditorPage() {
     enabled: editing,
   });
 
-  const [customerId, setCustomerId] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [customerAddress, setCustomerAddress] = useState("");
   const [issueDate, setIssueDate] = useState(todayInMalaysia());
   const [validUntil, setValidUntil] = useState("");
   const [notes, setNotes] = useState("");
@@ -89,7 +90,8 @@ export function QuotationEditorPage() {
   useEffect(() => {
     const document = existing.data?.document;
     if (!document) return;
-    setCustomerId(document.customerId);
+    const match = customers.data?.customers.find((entry) => entry.id === document.customerId);
+    setCustomerName(match?.name ?? "");
     setIssueDate(document.issueDate);
     setValidUntil(document.validUntil ?? "");
     setNotes(document.notes ?? "");
@@ -107,7 +109,7 @@ export function QuotationEditorPage() {
         discount: senToRinggit(line.discountSen),
       })),
     );
-  }, [existing.data]);
+  }, [existing.data, customers.data]);
 
   const totals = useMemo(() => {
     const mapped = lines.map((line) => ({
@@ -117,6 +119,10 @@ export function QuotationEditorPage() {
     }));
     return computeTotals(mapped, ringgitToSen(discount) ?? 0, 0);
   }, [lines, discount]);
+
+  const matchedCustomer = (customers.data?.customers ?? []).find(
+    (entry) => entry.name.trim().toLowerCase() === customerName.trim().toLowerCase(),
+  );
 
   const save = useMutation({
     mutationFn: async (mode: "draft" | "issue") => {
@@ -141,7 +147,9 @@ export function QuotationEditorPage() {
       });
 
       const input = {
-        customerId,
+        ...(matchedCustomer
+          ? { customerId: matchedCustomer.id }
+          : { customer: { name: customerName.trim(), billingAddress: customerAddress } }),
         issueDate,
         validUntil: validUntil || undefined,
         notes: notes || null,
@@ -210,27 +218,37 @@ export function QuotationEditorPage() {
           <CardTitle className="text-base">Details</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
-          <Field label="Customer">
-            <Select
-              value={customerId}
-              onValueChange={(value) => setCustomerId(value ?? "")}
-              items={customerList.map((customer) => ({
-                value: customer.id,
-                label: customer.name,
-              }))}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {customerList.map((customer) => (
-                  <SelectItem key={customer.id} value={customer.id}>
-                    {customer.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Field
+            label="Customer"
+            hint={
+              customerName.trim() === ""
+                ? "Type the buyer's name."
+                : matchedCustomer
+                  ? "Existing customer — reusing their record."
+                  : "New customer — saved when you save this draft."
+            }
+          >
+            <Input
+              list="customer-suggestions"
+              value={customerName}
+              onChange={(event) => setCustomerName(event.target.value)}
+              placeholder="Customer name"
+            />
+            <datalist id="customer-suggestions">
+              {customerList.map((customer) => (
+                <option key={customer.id} value={customer.name} />
+              ))}
+            </datalist>
           </Field>
+          {customerName.trim() && !matchedCustomer ? (
+            <Field label="Billing address" hint="Required for a new customer.">
+              <Textarea
+                rows={3}
+                value={customerAddress}
+                onChange={(event) => setCustomerAddress(event.target.value)}
+              />
+            </Field>
+          ) : null}
           <Field label="Issue date">
             <Input
               type="date"
@@ -403,13 +421,13 @@ export function QuotationEditorPage() {
         <Button
           variant="outline"
           onClick={() => save.mutate("draft")}
-          disabled={save.isPending || !customerId}
+          disabled={save.isPending || !customerName.trim()}
         >
           Save draft
         </Button>
         <Button
           onClick={() => save.mutate("issue")}
-          disabled={save.isPending || !customerId}
+          disabled={save.isPending || !customerName.trim()}
         >
           Issue
         </Button>

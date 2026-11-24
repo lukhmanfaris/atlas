@@ -587,7 +587,7 @@
       "status": "done",
       "depends_on": ["F-03", "F-04", "F-05", "F-06"],
       "acceptance_criteria": [
-        "Staff can create a draft quotation for a customer with item-based or free-text lines, edit it and delete it.",
+        "Staff can create a draft quotation by typing a customer name (an existing customer is reused on an exact name match, otherwise one is created with its billing address when the draft is saved) and by adding item-based or free-text lines, then edit and delete it.",
         "valid_until defaults to issue_date plus the company's quotation_validity_days.",
         "Totals follow calculations exactly; tests cover rounding with decimal quantities and line discounts.",
         "Issuing freezes the customer and company snapshots, assigns a number, stores the PDF in R2 and records its SHA-256.",
@@ -745,6 +745,7 @@
     { "date": "2026-11-24", "decision": "Document numbers are PREFIX-1042: no year, sequence starts at 1000 and never resets", "why": "The owner does not issue much volume and did not want numbers that advertise that. A high starting offset achieves it while staying consecutive and gap-free for accounting; random numbers were rejected because they would break gap-free numbering, ordering and explainability" },
     { "date": "2026-11-24", "decision": "Documents have no reference field", "why": "The owner does not use customer PO numbers; the field was removed from the data model, the API, the PDFs and the editor" },
     { "date": "2026-11-24", "decision": "Quotations have no manual accept or reject step", "why": "Nothing gates on acceptance, and converting to an invoice already implies it. Statuses are draft, issued, void, with accepted set only by conversion" },
-    { "date": "2026-11-24", "decision": "Items live under Settings, not in the bottom bar", "why": "The catalogue is set up rarely; the bar stays short: Home, Quotes, Settings, with Invoices added in F-08" }
+    { "date": "2026-11-24", "decision": "Items live under Settings, not in the bottom bar", "why": "The catalogue is set up rarely; the bar stays short: Home, Quotes, Settings, with Invoices added in F-08" },
+    { "date": "2026-11-24", "decision": "A document can be created from a typed customer name instead of picking one", "why": "Staff know the buyer's name before they have a customer record. The name is matched case-insensitively, reused when it matches exactly, and otherwise a customer is created when the draft is first saved" }
   ]
 }

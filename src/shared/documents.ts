@@ -15,22 +15,38 @@ export const documentLineSchema = z.strictObject({
 
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
 
+/** Typed free text: reused when the name matches an existing customer exactly. */
+export const documentCustomerSchema = z.strictObject({
+  name: z.string().trim().min(1).max(200),
+  billingAddress: z.string().trim().max(1000).optional(),
+  contactPerson: z.string().trim().max(120).nullish(),
+  phone: z.string().trim().max(40).nullish(),
+  email: z.union([z.email().max(200), z.literal("")]).nullish(),
+});
+
+export type DocumentCustomerInput = z.infer<typeof documentCustomerSchema>;
+
 export const createQuotationSchema = z.strictObject({
   type: z.literal("quotation"),
-  customerId: z.string().trim().min(1),
+  customerId: z.string().trim().min(1).optional(),
+  customer: documentCustomerSchema.optional(),
   issueDate: dateString,
   validUntil: dateString.optional(),
   notes: nullableText(2000),
   terms: nullableText(4000),
   discountSen: z.number().int().min(0).max(100_000_000).optional(),
   lines: z.array(documentLineSchema).min(1).max(300),
-});
+}).refine(
+  (value) => Boolean(value.customerId) !== Boolean(value.customer),
+  { message: "Provide either customerId or customer, not both.", path: ["customer"] },
+);
 
 export type CreateQuotationInput = z.infer<typeof createQuotationSchema>;
 
 export const updateQuotationSchema = z
   .strictObject({
     customerId: z.string().trim().min(1).optional(),
+    customer: documentCustomerSchema.optional(),
     issueDate: dateString.optional(),
     validUntil: dateString.nullable().optional(),
       notes: nullableText(2000),

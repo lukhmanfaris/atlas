@@ -23,9 +23,7 @@ export function CompanyAvatar({
           alt={`${company.name} logo`}
           className="size-full object-contain p-0.5"
         />
-      ) : (
-        company.name.slice(0, 2).toUpperCase()
-      )}
+      ) : null}
     </span>
   );
 }

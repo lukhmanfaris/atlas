@@ -312,3 +312,49 @@ describe("company scoping", () => {
     expect(documents).toHaveLength(1);
   });
 });
+
+describe("free-text customers", () => {
+  it("creates a customer from typed details and reuses it on the exact name", async () => {
+    const { email, companyId } = await setup();
+    const base = {
+      type: "quotation",
+      issueDate: "2026-11-24",
+      lines: LINES,
+      customer: { name: "Baru Sdn Bhd", billingAddress: "1 Jalan Baru" },
+    };
+
+    const first = await call("/api/documents", { as: email, companyId, body: base });
+    expect(first.status).toBe(201);
+
+    const second = await call("/api/documents", {
+      as: email,
+      companyId,
+      body: { ...base, customer: { name: "baru sdn bhd", billingAddress: "ignored" } },
+    });
+    expect(second.status).toBe(201);
+
+    const list = (await (await call("/api/customers", { as: email, companyId })).json()) as {
+      customers: { name: string }[];
+    };
+    expect(
+      list.customers.filter((customer) => customer.name.toLowerCase() === "baru sdn bhd"),
+    ).toHaveLength(1);
+  });
+
+  it("requires an address for a brand new customer", async () => {
+    const { email, companyId } = await setup();
+
+    const response = await call("/api/documents", {
+      as: email,
+      companyId,
+      body: {
+        type: "quotation",
+        issueDate: "2026-11-24",
+        lines: LINES,
+        customer: { name: "No Address Sdn Bhd" },
+      },
+    });
+
+    expect(response.status).toBe(400);
+  });
+});

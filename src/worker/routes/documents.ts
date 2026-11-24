@@ -1,10 +1,11 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { uuidv7 } from "uuidv7";
 import type { ZodError } from "zod";
 
 import {
   createQuotationSchema,
+  type DocumentCustomerInput,
   updateQuotationSchema,
   voidDocumentSchema,
 } from "@/shared/documents";
@@ -23,7 +24,7 @@ import {
   toTotalsLines,
   updateDraftHeader,
 } from "@/worker/db/documents";
-import { auditLog, documents } from "@/worker/db/schema";
+import { auditLog, customers, documents } from "@/worker/db/schema";
 import { apiError } from "@/worker/errors";
 import { amountInWords } from "@/worker/services/amount-in-words";
 import { addDays, todayInMalaysia } from "@/worker/services/dates";
@@ -66,6 +67,79 @@ async function detail(c: Context<AppEnv>, documentId: string) {
   return { ...withExpired(document), lines };
 }
 
+
+type ResolvedCustomer = { id: string } | { failure: "missing" | "address" };
+
+/**
+ * Either attaches an existing customer, or reuses one whose name matches
+ * exactly (case-insensitive), or creates a new one from the typed details.
+ */
+async function resolveCustomer(
+  db: ReturnType<typeof createDb>,
+  companyId: string,
+  input: { customerId?: string; customer?: DocumentCustomerInput },
+): Promise<ResolvedCustomer> {
+  if (input.customerId) {
+    const existing = await findCustomer(db, companyId, input.customerId);
+    if (!existing || existing.isArchived === 1) {
+      return { failure: "missing" };
+    }
+    return { id: existing.id };
+  }
+
+  if (!input.customer) {
+    return { failure: "missing" };
+  }
+
+  const [match] = await db
+    .select({ id: customers.id })
+    .from(customers)
+    .where(
+      and(
+        eq(customers.companyId, companyId),
+        sql`lower(${customers.name}) = lower(${input.customer.name})`,
+      ),
+    )
+    .limit(1);
+
+  if (match) {
+    return { id: match.id };
+  }
+
+  const billingAddress = input.customer.billingAddress?.trim();
+  if (!billingAddress) {
+    return { failure: "address" };
+  }
+
+  const id = uuidv7();
+  const now = Date.now();
+  await db.insert(customers).values({
+    id,
+    companyId,
+    name: input.customer.name,
+    billingAddress,
+    contactPerson: input.customer.contactPerson ?? null,
+    phone: input.customer.phone ?? null,
+    email: input.customer.email === "" ? null : (input.customer.email ?? null),
+    isArchived: 0,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  return { id };
+}
+
+function customerFailure(c: Context<AppEnv>, failure: "missing" | "address") {
+  if (failure === "address") {
+    return apiError(c, 400, "validation_error", "A new customer needs a billing address.", [
+      { path: "customer.billingAddress", message: "Billing address is required for a new customer." },
+    ]);
+  }
+  return apiError(c, 400, "validation_error", "Choose an active customer.", [
+    { path: "customerId", message: "Customer not found in this company." },
+  ]);
+}
+
 documentRoutes.get("/", requireCompany, async (c) => {
   const type = c.req.query("type") ?? "quotation";
   if (type !== "quotation" && type !== "invoice" && type !== "delivery_order") {
@@ -96,11 +170,9 @@ documentRoutes.post("/", requireCompany, async (c) => {
   const db = createDb(c.env.DB);
   const companyId = c.get("company").id;
 
-  const customer = await findCustomer(db, companyId, parsed.data.customerId);
-  if (!customer || customer.isArchived === 1) {
-    return apiError(c, 400, "validation_error", "Choose an active customer.", [
-      { path: "customerId", message: "Customer not found in this company." },
-    ]);
+  const customer = await resolveCustomer(db, companyId, parsed.data);
+  if ("failure" in customer) {
+    return customerFailure(c, customer.failure);
   }
 
   const company = await findCompany(db, companyId);
@@ -111,7 +183,7 @@ documentRoutes.post("/", requireCompany, async (c) => {
     companyId,
     userId: c.get("user").id,
     type: "quotation",
-    customerId: parsed.data.customerId,
+    customerId: customer.id,
     issueDate: parsed.data.issueDate,
     validUntil,
     notes: parsed.data.notes ?? null,
@@ -160,13 +232,13 @@ documentRoutes.patch("/:documentId", requireCompany, async (c) => {
     return apiError(c, 400, "validation_error", "Nothing to update.");
   }
 
-  if (parsed.data.customerId) {
-    const customer = await findCustomer(db, companyId, parsed.data.customerId);
-    if (!customer || customer.isArchived === 1) {
-      return apiError(c, 400, "validation_error", "Choose an active customer.", [
-        { path: "customerId", message: "Customer not found in this company." },
-      ]);
+  let resolvedCustomerId: string | undefined;
+  if (parsed.data.customerId || parsed.data.customer) {
+    const resolved = await resolveCustomer(db, companyId, parsed.data);
+    if ("failure" in resolved) {
+      return customerFailure(c, resolved.failure);
     }
+    resolvedCustomerId = resolved.id;
   }
 
   const effectiveLines = parsed.data.lines ?? (await findLines(db, documentId));
@@ -178,7 +250,7 @@ documentRoutes.patch("/:documentId", requireCompany, async (c) => {
   }
 
   await updateDraftHeader(db, companyId, documentId, {
-    ...(parsed.data.customerId ? { customerId: parsed.data.customerId } : {}),
+    ...(resolvedCustomerId ? { customerId: resolvedCustomerId } : {}),
     ...(parsed.data.issueDate ? { issueDate: parsed.data.issueDate } : {}),
     ...(parsed.data.validUntil !== undefined ? { validUntil: parsed.data.validUntil } : {}),
     ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),

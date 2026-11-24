@@ -47,12 +47,11 @@ export function CompanyPicker() {
     <>
       <Button
         type="button"
-        variant="outline"
+        variant="ghost"
         aria-label="Switch company"
         onClick={() => setOpen(true)}
-        className="h-auto max-w-64 gap-2 rounded-full px-2 py-1"
+        className="h-auto max-w-64 gap-1 px-1 py-1 hover:underline"
       >
-        <CompanyAvatar company={company} className="size-6 rounded-md text-[10px]" />
         <span className="truncate text-sm font-medium">{company.name}</span>
         <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
       </Button>
@@ -77,7 +76,7 @@ export function CompanyPicker() {
                   entry.id === company.id && "border-foreground",
                 )}
               >
-                <CompanyAvatar company={entry} />
+                {entry.logoR2Key ? <CompanyAvatar company={entry} /> : null}
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">{entry.name}</span>
                   <span className="text-xs capitalize text-muted-foreground">{entry.role}</span>
