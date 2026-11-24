@@ -49,15 +49,16 @@ function statusBadge(status: string, expired: boolean) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-export function QuotationsPage() {
+export function QuotationsPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" }) {
   const { company } = useCompany();
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
 
   const quotations = useQuery({
-    queryKey: ["quotations", company.id, status, q],
+    queryKey: ["quotations", documentType, company.id, status, q],
     queryFn: () =>
       listQuotations(company.id, {
+        type: documentType,
         status: status === "all" ? undefined : status,
         q: q || undefined,
       }),
@@ -69,12 +70,16 @@ export function QuotationsPage() {
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Quotations</h1>
-          <p className="text-sm text-muted-foreground">Quotations issued by {company.name}.</p>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {documentType === "invoice" ? "Invoices" : "Quotations"}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {documentType === "invoice" ? "Invoices" : "Quotations"} issued by {company.name}.
+          </p>
         </div>
-        <Button nativeButton={false} render={<Link to="/quotations/new" />}>
+        <Button nativeButton={false} render={<Link to={`/${documentType === "invoice" ? "invoices" : "quotations"}/new`} />}>
           <Plus className="size-4" />
-          New quotation
+          {documentType === "invoice" ? "New invoice" : "New quotation"}
         </Button>
       </header>
 
@@ -115,7 +120,7 @@ export function QuotationsPage() {
           ) : quotations.isError ? (
             <p className="p-4 text-sm text-destructive">{quotations.error.message}</p>
           ) : rows.length === 0 ? (
-            <p className="p-4 text-sm text-muted-foreground">No quotations yet.</p>
+            <p className="p-4 text-sm text-muted-foreground">Nothing here yet.</p>
           ) : (
             <Table>
               <TableHeader>
@@ -133,7 +138,7 @@ export function QuotationsPage() {
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        to={`/quotations/${row.id}`}
+                        to={`/${documentType === "invoice" ? "invoices" : "quotations"}/${row.id}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
                         {row.number ?? "Draft"}

@@ -66,6 +66,7 @@ export type CreateDraftInput = {
   customerId: string;
   issueDate: string;
   validUntil: string | null;
+  dueDate: string | null;
   notes: string | null;
   terms: string | null;
   discountSen: number;
@@ -89,6 +90,7 @@ export async function createDraft(
       customerId: input.customerId,
       issueDate: input.issueDate,
       validUntil: input.validUntil,
+      dueDate: input.dueDate,
       notes: input.notes,
       terms: input.terms,
       discountSen: input.discountSen,
@@ -167,7 +169,8 @@ export async function updateDraftHeader(
     customerId: string;
     issueDate: string;
     validUntil: string | null;
-      notes: string | null;
+    dueDate: string | null;
+    notes: string | null;
     terms: string | null;
     discountSen: number;
     subtotalSen: number;

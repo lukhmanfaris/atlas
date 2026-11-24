@@ -1,9 +1,10 @@
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { uuidv7 } from "uuidv7";
 import type { ZodError } from "zod";
 
 import {
+  createInvoiceSchema,
   createQuotationSchema,
   type DocumentCustomerInput,
   updateQuotationSchema,
@@ -156,7 +157,14 @@ documentRoutes.get("/", requireCompany, async (c) => {
 });
 
 documentRoutes.post("/", requireCompany, async (c) => {
-  const parsed = createQuotationSchema.safeParse(await readJson(c));
+  const raw = await readJson(c);
+  const requestedType = (raw as { type?: unknown } | null)?.type;
+  if (requestedType !== "quotation" && requestedType !== "invoice") {
+    return apiError(c, 400, "validation_error", "Documents are quotations or invoices.");
+  }
+
+  const parsed = (requestedType === "quotation" ? createQuotationSchema : createInvoiceSchema)
+    .safeParse(raw);
   if (!parsed.success) {
     return apiError(
       c,
@@ -176,16 +184,27 @@ documentRoutes.post("/", requireCompany, async (c) => {
   }
 
   const company = await findCompany(db, companyId);
+  const customerRow = await findCustomer(db, companyId, customer.id);
+  const paymentTerms =
+    customerRow?.paymentTermsDays ?? company?.defaultPaymentTermsDays ?? 30;
+
   const validUntil =
-    parsed.data.validUntil ?? addDays(parsed.data.issueDate, company?.quotationValidityDays ?? 30);
+    requestedType === "quotation"
+      ? (parsed.data.validUntil ?? addDays(parsed.data.issueDate, company?.quotationValidityDays ?? 30))
+      : null;
+  const dueDate =
+    requestedType === "invoice"
+      ? (parsed.data.dueDate ?? addDays(parsed.data.issueDate, paymentTerms))
+      : null;
 
   const created = await createDraft(db, {
     companyId,
     userId: c.get("user").id,
-    type: "quotation",
+    type: requestedType,
     customerId: customer.id,
     issueDate: parsed.data.issueDate,
     validUntil,
+    dueDate,
     notes: parsed.data.notes ?? null,
     terms: parsed.data.terms ?? null,
     discountSen: parsed.data.discountSen ?? 0,
@@ -300,10 +319,17 @@ documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {
   }
 
   const company = await findCompany(db, companyId);
+  const customerRow = await findCustomer(db, companyId, document.customerId);
   const totals = computeTotals(toTotalsLines(lines), document.discountSen, 0);
   const issuedAt = Date.now();
   const validUntil =
     document.validUntil ?? addDays(document.issueDate, company?.quotationValidityDays ?? 30);
+  const dueDate =
+    document.dueDate ??
+    addDays(
+      document.issueDate,
+      customerRow?.paymentTermsDays ?? company?.defaultPaymentTermsDays ?? 30,
+    );
 
   // Freeze exactly what the PDF will show.
   await db
@@ -311,7 +337,8 @@ documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {
     .set({
       customerSnapshot: JSON.stringify(await customerSnapshot(c.env.DB, document.customerId)),
       companySnapshot: JSON.stringify(await companySnapshot(c.env.DB, companyId)),
-      validUntil,
+      validUntil: document.type === "quotation" ? validUntil : null,
+      dueDate: document.type === "invoice" ? dueDate : null,
       subtotalSen: totals.subtotalSen,
       taxSen: 0,
       totalSen: totals.totalSen,
@@ -335,7 +362,7 @@ documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {
   const issued = await issueDocumentNumber(c.env.DB, {
     companyId,
     documentId,
-    type: "quotation",
+    type: document.type,
     issueDate: document.issueDate,
     issuedAt,
     issuedBy: user.id,
@@ -388,6 +415,29 @@ documentRoutes.post("/:documentId/void", requireCompany, requireOwner, async (c)
   }
   if (!["issued", "accepted", "rejected"].includes(document.status)) {
     return apiError(c, 409, "invalid_state", "Only an issued document can be voided.");
+  }
+
+  if (document.type === "invoice") {
+    const pending = await db
+      .select({ id: documents.id })
+      .from(documents)
+      .where(
+        and(
+          eq(documents.sourceDocumentId, documentId),
+          eq(documents.type, "delivery_order"),
+          ne(documents.status, "void"),
+        ),
+      )
+      .limit(1);
+
+    if (pending.length > 0) {
+      return apiError(
+        c,
+        409,
+        "invalid_state",
+        "Void the delivery orders for this invoice before voiding the invoice.",
+      );
+    }
   }
 
   const at = Date.now();

@@ -115,7 +115,7 @@ test("creates and issues a quotation", async ({ page }) => {
   await page.goto("/quotations");
   await page.getByRole("button", { name: /New quotation/ }).click();
 
-  await page.getByLabel("Customer").fill(`E2E Buyer ${Date.now()}`);
+  await page.getByPlaceholder("Customer name").fill(`E2E Buyer ${Date.now()}`);
   await page.getByLabel("Billing address").fill("1 Test Road\n50000 Kuala Lumpur");
 
   await page.getByLabel("Description").first().fill("A4 Copier Paper");
@@ -131,4 +131,21 @@ test("creates and issues a quotation", async ({ page }) => {
 
   await expect(page.getByText(/QT-\d{4}/)).toBeVisible();
   await expect(page.getByText("issued", { exact: true })).toBeVisible();
+});
+
+test("creates and issues an invoice", async ({ page }) => {
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: /New invoice/ }).click();
+
+  await page.getByPlaceholder("Customer name").fill(`E2E Invoice Buyer ${Date.now()}`);
+  await page.getByLabel("Billing address").fill("2 Test Road\n50000 Kuala Lumpur");
+  await page.getByLabel("Description").first().fill("Consulting");
+  await page.getByLabel("Qty").fill("1");
+  await page.getByLabel("Unit price (RM)").fill("100.00");
+
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page).toHaveURL(/\/invoices\/[0-9a-f-]+$/);
+
+  await page.getByRole("button", { name: "Issue" }).click();
+  await expect(page.getByText(/INV-\d{4}/)).toBeVisible();
 });

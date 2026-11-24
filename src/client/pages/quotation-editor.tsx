@@ -25,6 +25,7 @@ import {
 } from "../api";
 import { Field } from "../components/field";
 import { useCompany } from "../company";
+import type { CreateQuotationInput, UpdateQuotationInput } from "@/shared/documents";
 import { formatRinggit, ringgitToSen, senToRinggit } from "@/shared/items";
 import { milliToQty, qtyToMilli } from "@/shared/quantities";
 import { computeTotals } from "@/shared/totals";
@@ -57,7 +58,8 @@ function todayInMalaysia(): string {
   return new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 10);
 }
 
-export function QuotationEditorPage() {
+export function QuotationEditorPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" }) {
+  const basePath = documentType === "invoice" ? "/invoices" : "/quotations";
   const { documentId } = useParams<{ documentId: string }>();
   const { company } = useCompany();
   const navigate = useNavigate();
@@ -151,7 +153,9 @@ export function QuotationEditorPage() {
           ? { customerId: matchedCustomer.id }
           : { customer: { name: customerName.trim(), billingAddress: customerAddress } }),
         issueDate,
-        validUntil: validUntil || undefined,
+        ...(documentType === "invoice"
+          ? { dueDate: validUntil || undefined }
+          : { validUntil: validUntil || undefined }),
         notes: notes || null,
         terms: terms || null,
         discountSen: ringgitToSen(discount) ?? 0,
@@ -159,8 +163,8 @@ export function QuotationEditorPage() {
       };
 
       const saved = editing && documentId
-        ? await updateQuotation(company.id, documentId, input)
-        : await createQuotation(company.id, { type: "quotation", ...input });
+        ? await updateQuotation(company.id, documentId, input as UpdateQuotationInput)
+        : await createQuotation(company.id, input as CreateQuotationInput, documentType);
 
       if (mode === "issue") {
         return issueQuotation(company.id, saved.document.id);
@@ -168,14 +172,14 @@ export function QuotationEditorPage() {
       return saved;
     },
     onSuccess: (result) => {
-      navigate(`/quotations/${result.document.id}`);
+      navigate(`${basePath}/${result.document.id}`);
     },
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
   const removeDraft = useMutation({
     mutationFn: () => deleteQuotation(company.id, documentId ?? ""),
-    onSuccess: () => navigate("/quotations"),
+    onSuccess: () => navigate(basePath),
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
@@ -206,7 +210,7 @@ export function QuotationEditorPage() {
     <div className="space-y-6">
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">
-          {editing ? "Edit quotation" : "New quotation"}
+          {editing ? "Edit" : "New"} {documentType}
         </h1>
         <p className="text-sm text-muted-foreground">
           Drafts can be changed freely. Issuing freezes the document and assigns its number.
@@ -256,7 +260,14 @@ export function QuotationEditorPage() {
               onChange={(event) => setIssueDate(event.target.value)}
             />
           </Field>
-          <Field label="Valid until" hint="Leave blank to use the company default.">
+          <Field
+            label={documentType === "invoice" ? "Due date" : "Valid until"}
+            hint={
+              documentType === "invoice"
+                ? "Leave blank to use the customer's payment terms."
+                : "Leave blank to use the company default."
+            }
+          >
             <Input
               type="date"
               value={validUntil}

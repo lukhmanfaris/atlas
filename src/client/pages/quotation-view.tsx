@@ -29,7 +29,8 @@ import {
 } from "../api";
 import { useCompany } from "../company";
 
-export function QuotationViewPage() {
+export function QuotationViewPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" }) {
+  const basePath = documentType === "invoice" ? "/invoices" : "/quotations";
   const { documentId } = useParams<{ documentId: string }>();
   const { company } = useCompany();
   const navigate = useNavigate();
@@ -74,7 +75,7 @@ export function QuotationViewPage() {
 
   const remove = useMutation({
     mutationFn: () => deleteQuotation(company.id, documentId ?? ""),
-    onSuccess: () => navigate("/quotations"),
+    onSuccess: () => navigate(basePath),
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
@@ -88,7 +89,7 @@ export function QuotationViewPage() {
         <p className="text-sm text-destructive">
           {quotation.error?.message ?? "Quotation not found."}
         </p>
-        <Button variant="outline" nativeButton={false} render={<Link to="/quotations" />}>
+        <Button variant="outline" nativeButton={false} render={<Link to={basePath} />}>
           <ArrowLeft className="size-4" />
           Quotations
         </Button>
@@ -103,16 +104,16 @@ export function QuotationViewPage() {
 
   return (
     <div className="space-y-6">
-      <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link to="/quotations" />}>
+      <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link to={basePath} />}>
         <ArrowLeft className="size-4" />
-        Quotations
+        {documentType === "invoice" ? "Invoices" : "Quotations"}
       </Button>
 
       <Card>
         <CardHeader className="gap-3 border-b sm:flex sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="flex flex-wrap items-center gap-2 text-xl">
-              {document.number ?? "Draft quotation"}
+              {document.number ?? `Draft ${documentType}`}
               <Badge variant={document.expired ? "destructive" : "secondary"}>
                 {document.expired ? "expired" : document.status}
               </Badge>
@@ -129,7 +130,7 @@ export function QuotationViewPage() {
                   variant="outline"
                   size="sm"
                   nativeButton={false}
-                  render={<Link to={`/quotations/${document.id}/edit`} />}
+                  render={<Link to={`${basePath}/${document.id}/edit`} />}
                 >
                   <Pencil className="size-4" />
                   Edit
@@ -281,7 +282,7 @@ export function QuotationViewPage() {
               disabled={!reason.trim() || voidIt.isPending}
               onClick={() => voidIt.mutate()}
             >
-              {voidIt.isPending ? "Voiding…" : "Void quotation"}
+              {voidIt.isPending ? "Voiding…" : "Void document"}
             </Button>
           </DialogFooter>
         </DialogContent>

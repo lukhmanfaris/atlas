@@ -600,7 +600,7 @@
       "title": "Invoices",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-03", "F-04", "F-05", "F-06"],
       "acceptance_criteria": [
         "Staff can create, edit and delete draft invoices with the same line editor as quotations.",

@@ -26,20 +26,30 @@ export const documentCustomerSchema = z.strictObject({
 
 export type DocumentCustomerInput = z.infer<typeof documentCustomerSchema>;
 
-export const createQuotationSchema = z.strictObject({
-  type: z.literal("quotation"),
+const documentFields = {
   customerId: z.string().trim().min(1).optional(),
   customer: documentCustomerSchema.optional(),
   issueDate: dateString,
   validUntil: dateString.optional(),
+  dueDate: dateString.optional(),
   notes: nullableText(2000),
   terms: nullableText(4000),
   discountSen: z.number().int().min(0).max(100_000_000).optional(),
   lines: z.array(documentLineSchema).min(1).max(300),
-}).refine(
-  (value) => Boolean(value.customerId) !== Boolean(value.customer),
-  { message: "Provide either customerId or customer, not both.", path: ["customer"] },
-);
+};
+
+const oneCustomer = {
+  message: "Provide either customerId or customer, not both.",
+  path: ["customer"],
+};
+
+export const createQuotationSchema = z
+  .strictObject({ type: z.literal("quotation"), ...documentFields })
+  .refine((value) => Boolean(value.customerId) !== Boolean(value.customer), oneCustomer);
+
+export const createInvoiceSchema = z
+  .strictObject({ type: z.literal("invoice"), ...documentFields })
+  .refine((value) => Boolean(value.customerId) !== Boolean(value.customer), oneCustomer);
 
 export type CreateQuotationInput = z.infer<typeof createQuotationSchema>;
 
@@ -49,6 +59,7 @@ export const updateQuotationSchema = z
     customer: documentCustomerSchema.optional(),
     issueDate: dateString.optional(),
     validUntil: dateString.nullable().optional(),
+    dueDate: dateString.nullable().optional(),
       notes: nullableText(2000),
     terms: nullableText(4000),
     discountSen: z.number().int().min(0).max(100_000_000).optional(),

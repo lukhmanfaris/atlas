@@ -162,9 +162,9 @@ import type {
 
 export function listQuotations(
   companyId: string,
-  options: { status?: string; q?: string } = {},
+  options: { status?: string; q?: string; type?: "quotation" | "invoice" } = {},
 ) {
-  const params = new URLSearchParams({ type: "quotation" });
+  const params = new URLSearchParams({ type: options.type ?? "quotation" });
   if (options.status) params.set("status", options.status);
   if (options.q) params.set("q", options.q);
 
@@ -179,10 +179,14 @@ export function getQuotation(companyId: string, documentId: string) {
   return request<{ document: DocumentDto }>(`/documents/${documentId}`, {}, companyId);
 }
 
-export function createQuotation(companyId: string, input: CreateQuotationInput) {
+export function createQuotation(
+  companyId: string,
+  input: CreateQuotationInput,
+  type: "quotation" | "invoice" = "quotation",
+) {
   return request<{ document: DocumentDto }>(
     "/documents",
-    { method: "POST", body: JSON.stringify(input) },
+    { method: "POST", body: JSON.stringify({ ...input, type }) },
     companyId,
   );
 }
