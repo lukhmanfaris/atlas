@@ -485,7 +485,7 @@
       "title": "Project scaffold and deployment",
       "milestone": "M0",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": [],
       "acceptance_criteria": [
         "The repository matches repo_layout, and `npm run dev`, `npm run check`, `npm run deploy:staging` work.",
