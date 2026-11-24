@@ -56,10 +56,13 @@ const directory = mkdtempSync(join(tmpdir(), "atlas-seed-"));
 const file = join(directory, "seed.sql");
 writeFileSync(file, sql, "utf8");
 
-execFileSync(
-  "npx",
-  ["wrangler", "d1", "execute", "DB", "--local", "--file", file],
-  { stdio: "inherit" },
-);
+const remote = process.argv.includes("--remote");
+const target = remote
+  ? ["wrangler", "d1", "execute", "DB", "--remote", "--env", "staging", "--file", file]
+  : ["wrangler", "d1", "execute", "DB", "--local", "--file", file];
 
-console.log("Seeded local D1: 2 companies, 2 users, 3 customers, 4 items.");
+execFileSync("npx", target, { stdio: "inherit" });
+
+console.log(
+  `Seeded ${remote ? "staging" : "local"} D1: 2 companies, 2 users, 3 customers, 4 items.`,
+);

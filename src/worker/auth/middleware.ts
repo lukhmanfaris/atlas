@@ -1,13 +1,23 @@
 import type { MiddlewareHandler } from "hono";
 
+import type { CompanyRole } from "@/shared/enums";
+import type { User } from "@/worker/db/schema";
+
 import { apiError } from "@/worker/errors";
 
 import { resolveDevIdentity, verifyAccessToken, type AccessIdentity } from "./access";
+
+export type CompanyScope = {
+  id: string;
+  role: CompanyRole;
+};
 
 export type AppEnv = {
   Bindings: Env;
   Variables: {
     identity: AccessIdentity;
+    user: User;
+    company: CompanyScope;
   };
 };
 

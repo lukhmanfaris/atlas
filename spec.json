@@ -500,7 +500,7 @@
       "title": "Users, roles and company membership",
       "milestone": "M1",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-00"],
       "acceptance_criteria": [
         "A seeded owner can add a staff member by email to a company and set the role.",

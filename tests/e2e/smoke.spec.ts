@@ -4,5 +4,6 @@ test("the Hello page shows the signed-in staff email", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Hello" })).toBeVisible();
-  await expect(page.getByText("owner@example.com")).toBeVisible();
+  await expect(page.getByText("halfxindustries@gmail.com")).toBeVisible();
+  await expect(page.getByText("Atlas Trading Sdn Bhd")).toBeVisible();
 });

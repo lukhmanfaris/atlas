@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { companyRoleSchema, type CompanyRole } from "./enums";
+
 /**
  * Every API error uses this shape (spec.json -> api.errors):
  * { error: { code, message, details? } }
@@ -26,11 +28,28 @@ export const apiErrorCodes = {
 
 export type ApiErrorCode = (typeof apiErrorCodes)[keyof typeof apiErrorCodes];
 
-/**
- * GET /api/me. Grows in F-01 with the user's companies and roles.
- */
-export const meResponseSchema = z.strictObject({
+export const meUserSchema = z.strictObject({
+  id: z.string(),
   email: z.string(),
+  name: z.string(),
 });
 
+export const meCompanySchema = z.strictObject({
+  id: z.string(),
+  name: z.string(),
+  role: companyRoleSchema,
+});
+
+/**
+ * GET /api/me: the signed-in staff member and the companies they can work in.
+ */
+export const meResponseSchema = z.strictObject({
+  user: meUserSchema,
+  companies: z.array(meCompanySchema),
+});
+
+export type MeUser = z.infer<typeof meUserSchema>;
+export type MeCompany = z.infer<typeof meCompanySchema>;
 export type MeResponse = z.infer<typeof meResponseSchema>;
+
+export type { CompanyRole };

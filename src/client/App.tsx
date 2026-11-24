@@ -7,6 +7,12 @@ async function loadMe(): Promise<MeResponse> {
   if (response.status === 401) {
     throw new Error("Not signed in. Open this app through Cloudflare Access.");
   }
+  if (response.status === 403) {
+    const body = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(body?.error?.message ?? "You do not have access to this app.");
+  }
   if (!response.ok) {
     throw new Error(`The server answered with ${response.status}.`);
   }
@@ -25,9 +31,23 @@ export function App() {
         ) : me.isError ? (
           <p className="mt-3 text-red-700">{me.error.message}</p>
         ) : (
-          <p className="mt-3 text-slate-700">
-            Signed in as <span className="font-medium text-slate-900">{me.data.email}</span>
-          </p>
+          <>
+            <p className="mt-3 text-slate-700">
+              Signed in as{" "}
+              <span className="font-medium text-slate-900">{me.data.user.email}</span>
+            </p>
+            <h2 className="mt-6 text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Companies
+            </h2>
+            <ul className="mt-2 divide-y divide-slate-100">
+              {me.data.companies.map((company) => (
+                <li key={company.id} className="flex items-center justify-between py-2">
+                  <span className="text-slate-900">{company.name}</span>
+                  <span className="text-sm text-slate-500">{company.role}</span>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </section>
     </main>
