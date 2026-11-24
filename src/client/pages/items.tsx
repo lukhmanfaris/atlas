@@ -22,7 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/client/components/ui/table";
-import { formatRinggit, type CreateItemInput, type ItemDto } from "@/shared/items";
+import {
+  ITEM_CATEGORIES,
+  formatRinggit,
+  type CreateItemInput,
+  type ItemDto,
+} from "@/shared/items";
 
 import { ApiError, createItem, listItems, updateItem } from "../api";
 import { ItemForm } from "../components/item-form";
@@ -155,6 +160,9 @@ export function ItemsPage() {
                       </span>
                       <span className="block text-xs text-muted-foreground">
                         {item.sku ?? "No SKU"}
+                        {item.category
+                          ? ` · ${ITEM_CATEGORIES.find((entry) => entry.value === item.category)?.label ?? item.category}`
+                          : ""}
                         {item.description ? ` · ${item.description}` : ""}
                       </span>
                     </TableCell>

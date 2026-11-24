@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { formatSku } from "@/shared/items";
+
 import { call, seedCompany, seedMembership, seedUser, uniqueEmail } from "./helpers";
 
 async function setup(role: "owner" | "staff" = "staff") {
@@ -241,5 +243,94 @@ describe("PATCH /api/items/:id", () => {
     });
 
     expect(response.status).toBe(404);
+  });
+});
+
+describe("automatic SKUs", () => {
+  it("pads the number to three digits", () => {
+    expect(formatSku("MCH", 1)).toBe("MCH-001");
+    expect(formatSku("PRT", 42)).toBe("PRT-042");
+    expect(formatSku("CTRL", 123)).toBe("CTRL-123");
+    expect(formatSku("MCH", 1234)).toBe("MCH-1234");
+  });
+
+  it("assigns the next number per category, per company", async () => {
+    const { email, companyId } = await setup();
+    const other = await setup();
+
+    const first = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Tote bag", category: "MCH" },
+    });
+    const second = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Cap", category: "MCH" },
+    });
+    const printing = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Flyer", category: "PRT" },
+    });
+    const otherCompany = await call("/api/items", {
+      as: other.email,
+      companyId: other.companyId,
+      body: { name: "Tote bag", category: "MCH" },
+    });
+
+    expect(((await first.json()) as { item: { sku: string } }).item.sku).toBe("MCH-001");
+    expect(((await second.json()) as { item: { sku: string } }).item.sku).toBe("MCH-002");
+    expect(((await printing.json()) as { item: { sku: string } }).item.sku).toBe("PRT-001");
+    expect(((await otherCompany.json()) as { item: { sku: string } }).item.sku).toBe("MCH-001");
+  });
+
+  it("keeps a manually typed SKU instead of a generated one", async () => {
+    const { email, companyId } = await setup();
+
+    const response = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Custom", category: "MCH", sku: "MCH-CUSTOM" },
+    });
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { item: { sku: string } }).item.sku).toBe("MCH-CUSTOM");
+  });
+
+  it("does not invent a SKU when there is no category", async () => {
+    const { email, companyId } = await setup();
+
+    const response = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Uncategorised" },
+    });
+
+    expect(response.status).toBe(201);
+    expect(((await response.json()) as { item: { sku: string | null } }).item.sku).toBeNull();
+  });
+
+  it("stores the category so the list can show it", async () => {
+    const { email, companyId } = await setup();
+
+    await call("/api/items", { as: email, companyId, body: { name: "Flyer", category: "PRT" } });
+
+    const body = (await (await call("/api/items", { as: email, companyId })).json()) as {
+      items: { category: string }[];
+    };
+    expect(body.items[0]?.category).toBe("PRT");
+  });
+
+  it("rejects an unknown category", async () => {
+    const { email, companyId } = await setup();
+
+    const response = await call("/api/items", {
+      as: email,
+      companyId,
+      body: { name: "Thing", category: "XYZ" },
+    });
+
+    expect(response.status).toBe(400);
   });
 });

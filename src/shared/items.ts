@@ -2,8 +2,23 @@ import { z } from "zod";
 
 const nullableText = (max: number) => z.string().trim().max(max).nullish();
 
+export const itemCategorySchema = z.enum(["MCH", "PRT", "CTRL"]);
+export type ItemCategory = z.infer<typeof itemCategorySchema>;
+
+export const ITEM_CATEGORIES: { value: ItemCategory; label: string }[] = [
+  { value: "MCH", label: "Merchandise" },
+  { value: "PRT", label: "Printing" },
+  { value: "CTRL", label: "Collaterals" },
+];
+
+/** MCH + 1 -> "MCH-001". Three digits, no year, never resets. */
+export function formatSku(category: ItemCategory, value: number): string {
+  return `${category}-${String(value).padStart(3, "0")}`;
+}
+
 export const createItemSchema = z.strictObject({
   sku: nullableText(60),
+  category: itemCategorySchema.nullish(),
   name: z.string().trim().min(1).max(200),
   description: nullableText(1000),
   unit: z.string().trim().min(1).max(20).optional(),
@@ -22,6 +37,7 @@ export type UpdateItemInput = z.infer<typeof updateItemSchema>;
 export type ItemDto = {
   id: string;
   sku: string | null;
+  category: ItemCategory | null;
   name: string;
   description: string | null;
   unit: string;

@@ -94,3 +94,21 @@ test("creates an item, prices it in sen and rejects a duplicate SKU", async ({ p
   await page.getByRole("row").filter({ hasText: sku }).getByRole("button", { name: "Archive" }).click();
   await expect(page.getByRole("row").filter({ hasText: sku })).toHaveCount(0);
 });
+
+test("assigns a SKU automatically from the category", async ({ page }) => {
+  const stamp = Date.now();
+
+  await page.goto("/items");
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(`Auto ${stamp}`);
+
+  await page.getByRole("combobox", { name: "Category" }).click();
+  await page.getByRole("option", { name: /MCH — Merchandise/ }).click();
+
+  await expect(page.getByText("Assigned when you save, e.g. MCH-001")).toBeVisible();
+  await page.getByRole("button", { name: "Save item" }).click();
+
+  const row = page.getByRole("row").filter({ hasText: `Auto ${stamp}` });
+  await expect(row).toBeVisible();
+  await expect(row.getByText(/MCH-\d{3}/)).toBeVisible();
+});

@@ -109,6 +109,7 @@ export const items = sqliteTable(
       .notNull()
       .references(() => companies.id),
     sku: text("sku"),
+    category: text("category", { enum: ["MCH", "PRT", "CTRL"] }),
     name: text("name").notNull(),
     description: text("description"),
     unit: text("unit").notNull().default("pcs"),
@@ -122,6 +123,18 @@ export const items = sqliteTable(
     index("items_company_id_name_idx").on(table.companyId, table.name),
     uniqueIndex("items_company_id_sku_unique").on(table.companyId, table.sku),
   ],
+);
+
+export const itemSkuSequences = sqliteTable(
+  "item_sku_sequences",
+  {
+    companyId: text("company_id")
+      .notNull()
+      .references(() => companies.id),
+    category: text("category", { enum: ["MCH", "PRT", "CTRL"] }).notNull(),
+    nextValue: integer("next_value").notNull().default(1),
+  },
+  (table) => [primaryKey({ columns: [table.companyId, table.category] })],
 );
 
 export const documents = sqliteTable(
@@ -245,6 +258,7 @@ export type NewCompanyMember = typeof companyMembers.$inferInsert;
 export type Customer = typeof customers.$inferSelect;
 export type NewCustomer = typeof customers.$inferInsert;
 export type Item = typeof items.$inferSelect;
+export type ItemSkuSequence = typeof itemSkuSequences.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type Document = typeof documents.$inferSelect;
 export type NewDocument = typeof documents.$inferInsert;

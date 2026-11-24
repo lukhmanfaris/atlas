@@ -6,7 +6,14 @@ import { createItemSchema, updateItemSchema, type ItemDto } from "@/shared/items
 import { requireCompany } from "@/worker/auth/company";
 import type { AppEnv } from "@/worker/auth/middleware";
 import { createDb } from "@/worker/db/client";
-import { createItem, findItem, findItemBySku, listItems, updateItem } from "@/worker/db/items";
+import {
+  allocateSku,
+  createItem,
+  findItem,
+  findItemBySku,
+  listItems,
+  updateItem,
+} from "@/worker/db/items";
 import type { Item } from "@/worker/db/schema";
 import { apiError } from "@/worker/errors";
 
@@ -66,20 +73,37 @@ itemRoutes.post("/", requireCompany, async (c) => {
 
   const db = createDb(c.env.DB);
   const companyId = c.get("company").id;
-  const sku = parsed.data.sku?.trim();
+  const manualSku = parsed.data.sku?.trim() || null;
+  const category = parsed.data.category ?? null;
 
-  if (sku && (await findItemBySku(db, companyId, sku))) {
+  if (manualSku && (await findItemBySku(db, companyId, manualSku))) {
     return apiError(c, 400, "validation_error", "That SKU is already used.", [skuTaken()]);
   }
 
-  let id: string;
-  try {
-    id = await createItem(db, companyId, parsed.data);
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("UNIQUE")) {
-      return apiError(c, 400, "validation_error", "That SKU is already used.", [skuTaken()]);
+  // With a category and no typed SKU, the number is assigned here.
+  let id: string | null = null;
+  for (let attempt = 0; attempt < 3 && id === null; attempt += 1) {
+    const sku = manualSku ?? (category ? await allocateSku(db, companyId, category) : null);
+
+    try {
+      id = await createItem(db, companyId, { ...parsed.data, sku });
+    } catch (error) {
+      const conflict = error instanceof Error && error.message.includes("UNIQUE");
+      if (!conflict) throw error;
+      if (manualSku) {
+        return apiError(c, 400, "validation_error", "That SKU is already used.", [skuTaken()]);
+      }
+      // Generated SKU collided with a typed one: take the next number.
     }
-    throw error;
+  }
+
+  if (id === null) {
+    return apiError(
+      c,
+      409,
+      "conflict",
+      "Could not assign a SKU just now. Please try again.",
+    );
   }
 
   const item = await findItem(db, companyId, id);

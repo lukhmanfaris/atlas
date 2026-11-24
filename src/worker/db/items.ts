@@ -1,10 +1,10 @@
-import { and, eq, like, or } from "drizzle-orm";
+import { and, eq, like, or, sql } from "drizzle-orm";
 import { uuidv7 } from "uuidv7";
 
-import type { CreateItemInput, UpdateItemInput } from "@/shared/items";
+import { formatSku, type CreateItemInput, type ItemCategory, type UpdateItemInput } from "@/shared/items";
 
 import type { Db } from "./client";
-import { items, type Item } from "./schema";
+import { itemSkuSequences, items, type Item } from "./schema";
 
 function searchTerm(q: string): string {
   return q.replace(/[%_]/g, "").trim();
@@ -69,6 +69,33 @@ export async function findItemBySku(
   return rows[0] ?? null;
 }
 
+/**
+ * Reserves the next SKU for a company and category. The counter is bumped in a
+ * single UPDATE ... RETURNING, so two concurrent saves never get the same one.
+ * SKU numbers are allowed to have gaps (unlike document numbers).
+ */
+export async function allocateSku(
+  db: Db,
+  companyId: string,
+  category: ItemCategory,
+): Promise<string> {
+  await db
+    .insert(itemSkuSequences)
+    .values({ companyId, category, nextValue: 1 })
+    .onConflictDoNothing();
+
+  const rows = await db
+    .update(itemSkuSequences)
+    .set({ nextValue: sql`${itemSkuSequences.nextValue} + 1` })
+    .where(
+      and(eq(itemSkuSequences.companyId, companyId), eq(itemSkuSequences.category, category)),
+    )
+    .returning({ nextValue: itemSkuSequences.nextValue });
+
+  const allocated = rows[0]?.nextValue ?? 1;
+  return formatSku(category, allocated - 1);
+}
+
 export async function createItem(
   db: Db,
   companyId: string,
@@ -81,6 +108,7 @@ export async function createItem(
     id,
     companyId,
     sku: cleanSku(input.sku),
+    category: input.category ?? null,
     name: input.name,
     description: input.description ?? null,
     unit: input.unit ?? "pcs",
