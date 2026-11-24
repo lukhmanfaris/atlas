@@ -8,6 +8,7 @@ import { CompanyProvider } from "./company";
 import { CustomerDetailPage } from "./pages/customer-detail";
 import { CustomersPage } from "./pages/customers";
 import { HomePage } from "./pages/home";
+import { ItemsPage } from "./pages/items";
 import { SettingsPage } from "./pages/settings";
 import "./styles.css";
 
@@ -25,6 +26,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:customerId", element: <CustomerDetailPage /> },
+      { path: "items", element: <ItemsPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

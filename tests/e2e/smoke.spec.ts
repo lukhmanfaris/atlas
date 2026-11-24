@@ -7,6 +7,7 @@ test("shows the signed-in email, the company switcher and the floating bar", asy
   await expect(page.getByRole("button", { name: "Switch company" })).toBeVisible();
   await expect(page.getByRole("navigation").getByRole("link", { name: "Customers" })).toBeVisible();
   await expect(page.getByRole("navigation").getByRole("link", { name: "Settings" })).toBeVisible();
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Items" })).toBeVisible();
 });
 
 test("switching company lands on customers and applies everywhere", async ({ page }) => {
@@ -62,4 +63,34 @@ test("creates, opens, edits and archives a customer", async ({ page }) => {
 
   await page.getByLabel("Show archived").check();
   await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
+});
+
+test("creates an item, prices it in sen and rejects a duplicate SKU", async ({ page }) => {
+  const stamp = Date.now();
+  const sku = `E2E-${stamp}`;
+
+  await page.goto("/items");
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(`E2E Item ${stamp}`);
+  await page.getByLabel(/^SKU/).fill(sku);
+  await page.getByLabel(/^Unit price/).fill("12.50");
+  await page.getByRole("button", { name: "Save item" }).click();
+
+  const row = page.getByRole("row").filter({ hasText: sku });
+  await expect(row).toBeVisible();
+  await expect(row.getByText("RM 12.50")).toBeVisible();
+
+  await page.getByRole("button", { name: "New item" }).click();
+  await page.getByLabel("Name", { exact: true }).fill("Duplicate SKU attempt");
+  await page.getByLabel(/^SKU/).fill(sku);
+  await page.getByRole("button", { name: "Save item" }).click();
+  await expect(
+    page.getByText("That SKU is already used by another item in this company."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel" }).click();
+
+  await page.getByPlaceholder("Search name or SKU").fill(sku);
+  await expect(page.getByRole("row").filter({ hasText: sku })).toBeVisible();
+  await page.getByRole("row").filter({ hasText: sku }).getByRole("button", { name: "Archive" }).click();
+  await expect(page.getByRole("row").filter({ hasText: sku })).toHaveCount(0);
 });

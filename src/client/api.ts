@@ -4,6 +4,7 @@ import type {
   CustomerDto,
   UpdateCustomerInput,
 } from "@/shared/customers";
+import type { CreateItemInput, ItemDto, UpdateItemInput } from "@/shared/items";
 import type { MeResponse } from "@/shared/api";
 
 const BASE = "/api";
@@ -119,6 +120,34 @@ export function updateCustomer(
 ) {
   return request<{ customer: CustomerDto }>(
     `/customers/${customerId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    companyId,
+  );
+}
+
+export function listItems(
+  companyId: string,
+  options: { q?: string; includeArchived?: boolean } = {},
+) {
+  const params = new URLSearchParams();
+  if (options.q) params.set("q", options.q);
+  if (options.includeArchived) params.set("include_archived", "1");
+  const query = params.toString();
+
+  return request<{ items: ItemDto[] }>(`/items${query ? `?${query}` : ""}`, {}, companyId);
+}
+
+export function createItem(companyId: string, input: CreateItemInput) {
+  return request<{ item: ItemDto }>(
+    "/items",
+    { method: "POST", body: JSON.stringify(input) },
+    companyId,
+  );
+}
+
+export function updateItem(companyId: string, itemId: string, input: UpdateItemInput) {
+  return request<{ item: ItemDto }>(
+    `/items/${itemId}`,
     { method: "PATCH", body: JSON.stringify(input) },
     companyId,
   );
