@@ -108,6 +108,9 @@ export type DocumentDto = {
   pdfR2Key: string | null;
   voidPdfR2Key: string | null;
   voidReason: string | null;
+  sourceDocumentId: string | null;
+  sourceNumber?: string | null;
+  linkedInvoices?: { id: string; number: string | null; status: string }[];
   lines: DocumentLineDto[];
 };
 

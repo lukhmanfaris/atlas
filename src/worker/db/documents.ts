@@ -34,7 +34,9 @@ export function toTotalsLines(lines: TotalsSource[]): TotalsLine[] {
   }));
 }
 
-function lineRows(documentId: string, lines: DocumentLineInput[]) {
+type LineWithSource = DocumentLineInput & { sourceLineId?: string | null };
+
+function lineRows(documentId: string, lines: LineWithSource[]) {
   const totals = computeTotals(toTotalsLines(lines));
 
   return lines.map((line, index) => ({
@@ -50,10 +52,11 @@ function lineRows(documentId: string, lines: DocumentLineInput[]) {
     discountSen: line.discountSen ?? 0,
     taxRateBp: 0,
     lineTotalSen: totals.lineTotalsSen[index] ?? 0,
+    sourceLineId: line.sourceLineId ?? null,
   }));
 }
 
-function insertLineStatements(db: Db, documentId: string, lines: DocumentLineInput[]) {
+function insertLineStatements(db: Db, documentId: string, lines: LineWithSource[]) {
   return chunks(lineRows(documentId, lines), LINES_PER_STATEMENT).map((chunk) =>
     db.insert(documentLines).values(chunk),
   );
@@ -70,7 +73,8 @@ export type CreateDraftInput = {
   notes: string | null;
   terms: string | null;
   discountSen: number;
-  lines: DocumentLineInput[];
+  sourceDocumentId?: string | null;
+  lines: (DocumentLineInput & { sourceLineId?: string | null })[];
 };
 
 export async function createDraft(
@@ -94,6 +98,7 @@ export async function createDraft(
       notes: input.notes,
       terms: input.terms,
       discountSen: input.discountSen,
+      sourceDocumentId: input.sourceDocumentId ?? null,
       taxSen: 0,
       subtotalSen: totals.subtotalSen,
       totalSen: totals.totalSen,

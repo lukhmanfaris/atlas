@@ -65,7 +65,32 @@ async function detail(c: Context<AppEnv>, documentId: string) {
   const document = await findDocument(db, companyId, documentId);
   if (!document) return null;
   const lines = await findLines(db, documentId);
-  return { ...withExpired(document), lines };
+
+  const sourceNumber = document.sourceDocumentId
+    ? ((await findDocument(db, companyId, document.sourceDocumentId))?.number ?? null)
+    : null;
+
+  const linkedInvoices =
+    document.type === "quotation"
+      ? (
+          await db
+            .select({
+              id: documents.id,
+              number: documents.number,
+              status: documents.status,
+            })
+            .from(documents)
+            .where(
+              and(
+                eq(documents.companyId, companyId),
+                eq(documents.sourceDocumentId, documentId),
+                eq(documents.type, "invoice"),
+              ),
+            )
+        )
+      : [];
+
+  return { ...withExpired(document), lines, sourceNumber, linkedInvoices };
 }
 
 
@@ -297,6 +322,105 @@ documentRoutes.delete("/:documentId", requireCompany, async (c) => {
 
   await deleteDraft(db, c.get("company").id, document.id);
   return c.body(null, 204);
+});
+
+
+documentRoutes.post("/:documentId/convert-to-invoice", requireCompany, async (c) => {
+  const db = createDb(c.env.DB);
+  const companyId = c.get("company").id;
+  const quotationId = c.req.param("documentId") ?? "";
+  const user = c.get("user");
+
+  const quotation = await findDocument(db, companyId, quotationId);
+  if (!quotation) {
+    return apiError(c, 404, "not_found", "Quotation not found.");
+  }
+  if (quotation.type !== "quotation") {
+    return apiError(c, 409, "invalid_state", "Only a quotation can be converted.");
+  }
+  if (quotation.status !== "issued" && quotation.status !== "accepted") {
+    return apiError(c, 409, "invalid_state", "Only an issued quotation can be converted.");
+  }
+
+  const existing = await db
+    .select({ id: documents.id })
+    .from(documents)
+    .where(
+      and(
+        eq(documents.companyId, companyId),
+        eq(documents.sourceDocumentId, quotationId),
+        eq(documents.type, "invoice"),
+        ne(documents.status, "void"),
+      ),
+    )
+    .limit(1);
+
+  if (existing.length > 0) {
+    return apiError(
+      c,
+      409,
+      "invalid_state",
+      "This quotation already has an invoice. Void that invoice before converting again.",
+    );
+  }
+
+  const lines = await findLines(db, quotationId);
+  if (lines.length === 0) {
+    return apiError(c, 409, "invalid_state", "The quotation has no lines to copy.");
+  }
+
+  const company = await findCompany(db, companyId);
+  const customer = await findCustomer(db, companyId, quotation.customerId);
+  const issueDate = todayInMalaysia();
+  const dueDate = addDays(
+    issueDate,
+    customer?.paymentTermsDays ?? company?.defaultPaymentTermsDays ?? 30,
+  );
+
+  const created = await createDraft(db, {
+    companyId,
+    userId: user.id,
+    type: "invoice",
+    customerId: quotation.customerId,
+    issueDate,
+    validUntil: null,
+    dueDate,
+    notes: quotation.notes,
+    terms: quotation.terms,
+    discountSen: quotation.discountSen,
+    sourceDocumentId: quotationId,
+    lines: lines.map((line) => ({
+      itemId: line.itemId,
+      sku: line.sku,
+      description: line.description,
+      unit: line.unit,
+      quantityMilli: line.quantityMilli,
+      unitPriceSen: line.unitPriceSen ?? 0,
+      discountSen: line.discountSen,
+      sourceLineId: line.id,
+    })),
+  });
+
+  const at = Date.now();
+  await db.batch([
+    db
+      .update(documents)
+      .set({ status: "accepted", updatedAt: at })
+      .where(and(eq(documents.companyId, companyId), eq(documents.id, quotationId))),
+    db.insert(auditLog).values({
+      id: uuidv7(),
+      companyId,
+      userId: user.id,
+      action: "document.convert",
+      entity: "document",
+      entityId: quotationId,
+      detail: JSON.stringify({ invoiceId: created.id }),
+      at,
+    }),
+  ]);
+
+  const body = await detail(c, created.id);
+  return c.json({ document: body }, 201);
 });
 
 documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {

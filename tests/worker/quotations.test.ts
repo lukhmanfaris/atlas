@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { addDays, todayInMalaysia } from "@/worker/services/dates";
+
 import { call, seedCompany, seedCustomer, seedMembership, seedUser, uniqueEmail } from "./helpers";
 
 const LINES = [
@@ -356,5 +358,89 @@ describe("free-text customers", () => {
     });
 
     expect(response.status).toBe(400);
+  });
+});
+
+describe("convert to invoice", () => {
+  async function issuedQuotation(role: "owner" | "staff" = "staff") {
+    const setupData = await setup(role);
+    const { id } = await createQuotation(
+      setupData.email,
+      setupData.companyId,
+      setupData.customerId,
+    );
+    await call(`/api/documents/${id}/issue`, {
+      as: setupData.email,
+      companyId: setupData.companyId,
+      method: "POST",
+    });
+    return { ...setupData, quotationId: id };
+  }
+
+  it("copies the quotation into a linked draft invoice and accepts the quotation", async () => {
+    const { email, companyId, quotationId } = await issuedQuotation();
+
+    const response = await call(`/api/documents/${quotationId}/convert-to-invoice`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+    expect(response.status).toBe(201);
+
+    const invoice = ((await response.json()) as {
+      document: {
+        id: string;
+        type: string;
+        status: string;
+        sourceDocumentId: string;
+        dueDate: string;
+        subtotalSen: number;
+        lines: { description: string; sourceLineId: string | null }[];
+      };
+    }).document;
+
+    expect(invoice.type).toBe("invoice");
+    expect(invoice.status).toBe("draft");
+    expect(invoice.sourceDocumentId).toBe(quotationId);
+    expect(invoice.subtotalSen).toBe(20375);
+    expect(invoice.dueDate).toBe(addDays(todayInMalaysia(), 30));
+    expect(invoice.lines.every((line) => line.sourceLineId !== null)).toBe(true);
+
+    const quotation = await call(`/api/documents/${quotationId}`, { as: email, companyId });
+    const body = (await quotation.json()) as {
+      document: { status: string; linkedInvoices: { id: string }[] };
+    };
+    expect(body.document.status).toBe("accepted");
+    expect(body.document.linkedInvoices[0]?.id).toBe(invoice.id);
+  });
+
+  it("refuses a second conversion while the invoice is live", async () => {
+    const { email, companyId, quotationId } = await issuedQuotation();
+    await call(`/api/documents/${quotationId}/convert-to-invoice`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+
+    const second = await call(`/api/documents/${quotationId}/convert-to-invoice`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+
+    expect(second.status).toBe(409);
+  });
+
+  it("refuses to convert a draft quotation", async () => {
+    const { email, companyId, customerId } = await setup("staff");
+    const { id } = await createQuotation(email, companyId, customerId);
+
+    const response = await call(`/api/documents/${id}/convert-to-invoice`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+
+    expect(response.status).toBe(409);
   });
 });

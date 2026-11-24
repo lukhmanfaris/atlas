@@ -215,6 +215,14 @@ export function issueQuotation(companyId: string, documentId: string) {
   );
 }
 
+export function convertToInvoice(companyId: string, documentId: string) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/convert-to-invoice`,
+    { method: "POST" },
+    companyId,
+  );
+}
+
 export function voidQuotation(companyId: string, documentId: string, reason: string) {
   return request<{ document: DocumentDto }>(
     `/documents/${documentId}/void`,

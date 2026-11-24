@@ -615,7 +615,7 @@
       "title": "Convert quotation to invoice",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-07", "F-08"],
       "acceptance_criteria": [
         "From an issued or accepted quotation, Convert creates a draft invoice with the same customer, lines, discounts, notes and reference, and source links on document and lines.",

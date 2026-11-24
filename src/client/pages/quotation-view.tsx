@@ -19,6 +19,7 @@ import { formatRinggit } from "@/shared/items";
 import { milliToQty } from "@/shared/quantities";
 
 import {
+  convertToInvoice,
   deleteQuotation,
   documentPdfUrl,
   documentPreviewUrl,
@@ -60,6 +61,15 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
   const issue = useMutation({
     mutationFn: () => issueQuotation(company.id, documentId ?? ""),
     onSuccess: () => refresh(),
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
+  const convert = useMutation({
+    mutationFn: () => convertToInvoice(company.id, documentId ?? ""),
+    onSuccess: async (result) => {
+      await refresh();
+      navigate(`/invoices/${result.document.id}`);
+    },
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
@@ -170,6 +180,12 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
                   <Download className="size-4" />
                   PDF
                 </Button>
+                {document.type === "quotation" &&
+                (document.status === "issued" || document.status === "accepted") ? (
+                  <Button size="sm" onClick={() => convert.mutate()} disabled={convert.isPending}>
+                    {convert.isPending ? "Converting…" : "Convert to invoice"}
+                  </Button>
+                ) : null}
                 {canVoid && isOwner ? (
                   <Button variant="ghost" size="sm" onClick={() => setVoidOpen(true)}>
                     Void
@@ -189,6 +205,29 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
 
           <div className="grid gap-4 text-sm sm:grid-cols-2">
             <Row label="Valid until" value={document.validUntil} />
+            {document.dueDate ? <Row label="Due date" value={document.dueDate} /> : null}
+            {document.sourceNumber ? (
+              <div className="flex justify-between gap-4 border-b pb-1">
+                <span className="text-muted-foreground">Quotation</span>
+                <Link
+                  to={`/quotations/${document.sourceDocumentId}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {document.sourceNumber}
+                </Link>
+              </div>
+            ) : null}
+            {document.linkedInvoices && document.linkedInvoices.length > 0 ? (
+              <div className="flex justify-between gap-4 border-b pb-1">
+                <span className="text-muted-foreground">Invoice</span>
+                <Link
+                  to={`/invoices/${document.linkedInvoices[0]?.id}`}
+                  className="underline-offset-4 hover:underline"
+                >
+                  {document.linkedInvoices[0]?.number ?? "draft"} ({document.linkedInvoices[0]?.status})
+                </Link>
+              </div>
+            ) : null}
           </div>
 
           <div className="overflow-x-auto">
