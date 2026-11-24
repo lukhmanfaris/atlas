@@ -7,6 +7,7 @@ import { apiError } from "@/worker/errors";
 import { companyRoutes } from "./routes/companies";
 import { customerRoutes } from "./routes/customers";
 import { documentPdfRoutes } from "./routes/document-pdf";
+import { auditRoutes } from "./routes/audit";
 import { documentRoutes } from "./routes/documents";
 import { itemRoutes } from "./routes/items";
 import { meRoutes } from "./routes/me";
@@ -39,6 +40,10 @@ app.use("/api/documents", requireIdentity, requireUser);
 app.use("/api/documents/*", requireIdentity, requireUser);
 app.route("/api/documents", documentRoutes);
 app.route("/api/documents", documentPdfRoutes);
+
+app.use("/api/audit-log", requireIdentity, requireUser);
+app.use("/api/audit-log/*", requireIdentity, requireUser);
+app.route("/api/audit-log", auditRoutes);
 
 app.notFound((c) => apiError(c, 404, "not_found", "Not found."));
 

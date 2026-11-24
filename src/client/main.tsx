@@ -9,6 +9,7 @@ import { CustomerDetailPage } from "./pages/customer-detail";
 import { DeliveryOrderEditorPage } from "./pages/delivery-order-editor";
 import { CustomersPage } from "./pages/customers";
 import { HomePage } from "./pages/home";
+import { ActivityPage } from "./pages/activity";
 import { ItemsPage } from "./pages/items";
 import { QuotationEditorPage } from "./pages/quotation-editor";
 import { QuotationViewPage } from "./pages/quotation-view";
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:customerId", element: <CustomerDetailPage /> },
       { path: "settings/items", element: <ItemsPage /> },
+      { path: "settings/activity", element: <ActivityPage /> },
       { path: "quotations", element: <QuotationsPage /> },
       { path: "invoices", element: <QuotationsPage documentType="invoice" /> },
       { path: "invoices/new", element: <QuotationEditorPage documentType="invoice" /> },

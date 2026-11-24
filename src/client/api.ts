@@ -326,3 +326,22 @@ export type DashboardData = {
 export function getDashboard(companyId: string) {
   return request<DashboardData>("/documents/dashboard", {}, companyId);
 }
+
+export type AuditEntry = {
+  id: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  detail: string | null;
+  at: number;
+  userEmail: string;
+  userName: string;
+};
+
+export function listAuditLog(companyId: string, page = 1) {
+  return request<{ entries: AuditEntry[]; page: number; hasMore: boolean }>(
+    `/audit-log?page=${page}`,
+    {},
+    companyId,
+  );
+}

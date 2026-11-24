@@ -5,6 +5,7 @@ import { cn } from "@/client/lib/utils";
 const TABS = [
   { href: "/settings", label: "Company" },
   { href: "/settings/items", label: "Items" },
+  { href: "/settings/activity", label: "Activity" },
 ];
 
 export function SettingsTabs() {
