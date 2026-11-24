@@ -73,6 +73,22 @@ at without touching production.
 4. Open the staging app and check: the company list, a few invoices, and that
    `/api/me` shows your email. Numbers and totals should match the export date.
 
+### Known quirk: insert order
+
+`wrangler d1 export` groups statements by table in an order that can break
+foreign keys on import (for example, `audit_log` rows before `companies` and
+`users` exist). If the import fails with `FOREIGN KEY constraint failed`, the
+statements must be reordered so parents come first:
+
+```
+users → companies → company_members → customers → items
+      → documents → document_lines → audit_log
+```
+
+The two sequence tables (`number_sequences`, `item_sku_sequences`) only depend
+on `companies`, so they can follow it. Creating tables is order-independent;
+only the `INSERT`s matter.
+
 ### Restore into production
 
 Same steps with `atlas-production` and `--env production`, and **only** after:
@@ -104,7 +120,7 @@ Do this on a normal day, not during an emergency.
 
 | Date | Run by | Result | Notes |
 | --- | --- | --- | --- |
-| — | — | not yet run | required before go-live |
+| 25/11/2026 | Owner | Passed | Staging rebuilt from `backups/2026/11/24.sql.gz`. Counts restored: 3 companies, 2 users, 4 customers, 1 document, 6 audit rows. Insert order had to be corrected for foreign keys (see above). PDF and preview both served after the download-route fix. |
 
 ---
 

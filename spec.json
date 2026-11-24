@@ -673,7 +673,7 @@
       "title": "Backups and restore drill",
       "milestone": "M3",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-00"],
       "acceptance_criteria": [
         "A nightly GitHub Actions job exports the production D1 database with `wrangler d1 export` and stores it, compressed, in the backup R2 bucket under backups/YYYY/MM/DD.sql.gz.",
