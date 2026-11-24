@@ -528,7 +528,7 @@
       "title": "Customers",
       "milestone": "M1",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-02"],
       "acceptance_criteria": [
         "Staff can create, edit, search by name and archive customers of the current company.",

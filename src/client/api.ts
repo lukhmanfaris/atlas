@@ -1,4 +1,9 @@
 import type { CompanyDto, CreateCompanyInput, UpdateCompanyInput } from "@/shared/companies";
+import type {
+  CreateCustomerInput,
+  CustomerDto,
+  UpdateCustomerInput,
+} from "@/shared/customers";
 import type { MeResponse } from "@/shared/api";
 
 const BASE = "/api";
@@ -14,15 +19,21 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${BASE}${path}`, {
-    ...init,
-    headers: {
-      Accept: "application/json",
-      ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      ...init.headers,
-    },
-  });
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  companyId?: string,
+): Promise<T> {
+  const headers = new Headers(init.headers);
+  headers.set("Accept", "application/json");
+  if (!(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (companyId) {
+    headers.set("X-Company-Id", companyId);
+  }
+
+  const response = await fetch(`${BASE}${path}`, { ...init, headers });
 
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as
@@ -71,4 +82,40 @@ export function uploadLogo(companyId: string, file: File) {
 
 export function logoUrl(companyId: string, version: number) {
   return `${BASE}/companies/${companyId}/logo?v=${version}`;
+}
+
+export function listCustomers(
+  companyId: string,
+  options: { q?: string; includeArchived?: boolean } = {},
+) {
+  const params = new URLSearchParams();
+  if (options.q) params.set("q", options.q);
+  if (options.includeArchived) params.set("include_archived", "1");
+  const query = params.toString();
+
+  return request<{ customers: CustomerDto[] }>(
+    `/customers${query ? `?${query}` : ""}`,
+    {},
+    companyId,
+  );
+}
+
+export function createCustomer(companyId: string, input: CreateCustomerInput) {
+  return request<{ customer: CustomerDto }>(
+    "/customers",
+    { method: "POST", body: JSON.stringify(input) },
+    companyId,
+  );
+}
+
+export function updateCustomer(
+  companyId: string,
+  customerId: string,
+  input: UpdateCustomerInput,
+) {
+  return request<{ customer: CustomerDto }>(
+    `/customers/${customerId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    companyId,
+  );
 }

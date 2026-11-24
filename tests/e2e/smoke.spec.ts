@@ -42,3 +42,25 @@ test("hides the tax fields while the company is not SST-registered", async ({ pa
   await expect(page.getByLabel("MSIC code")).toHaveCount(0);
   await expect(page.getByText(/not SST-registered/)).toBeVisible();
 });
+
+test("creates, finds and archives a customer", async ({ page }) => {
+  const name = `E2E Customer ${Date.now()}`;
+
+  await page.goto("/customers");
+  await page.getByRole("button", { name: "New customer" }).click();
+  await page.getByLabel("Name", { exact: true }).fill(name);
+  await page.getByLabel("Billing address", { exact: true }).fill("1 Test Road\n50000 Kuala Lumpur");
+  await page.getByRole("button", { name: "Save customer" }).click();
+
+  const row = page.getByRole("listitem").filter({ hasText: name });
+  await expect(row).toBeVisible();
+
+  await page.getByPlaceholder("Search by name").fill(name);
+  await expect(row).toBeVisible();
+
+  await row.getByRole("button", { name: "Archive" }).click();
+  await expect(row).toHaveCount(0);
+
+  await page.getByLabel("Show archived").check();
+  await expect(page.getByRole("listitem").filter({ hasText: "archived" })).toBeVisible();
+});

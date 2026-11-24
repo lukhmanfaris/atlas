@@ -6,6 +6,7 @@ import { useCompany } from "./company";
 export function App() {
   const { user, companies, company, selectCompany } = useCompany();
   const location = useLocation();
+  const onCustomers = location.pathname.startsWith("/customers");
   const onSettings = location.pathname.startsWith("/settings");
 
   return (
@@ -47,6 +48,14 @@ export function App() {
               className={onSettings ? "text-slate-600 hover:text-slate-900" : "font-medium text-slate-900"}
             >
               Home
+            </Link>
+            <Link
+              to="/customers"
+              className={
+                onCustomers ? "font-medium text-slate-900" : "text-slate-600 hover:text-slate-900"
+              }
+            >
+              Customers
             </Link>
             <Link
               to="/settings"
