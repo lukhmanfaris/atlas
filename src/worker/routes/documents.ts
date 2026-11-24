@@ -122,7 +122,21 @@ async function detail(c: Context<AppEnv>, documentId: string) {
     };
   }
 
-  return { ...withExpired(document), lines, sourceNumber, linkedInvoices };
+  const linkedDeliveryOrders =
+    document.type === "invoice"
+      ? await db
+          .select({ id: documents.id, number: documents.number, status: documents.status })
+          .from(documents)
+          .where(
+            and(
+              eq(documents.companyId, companyId),
+              eq(documents.sourceDocumentId, documentId),
+              eq(documents.type, "delivery_order"),
+            ),
+          )
+      : [];
+
+  return { ...withExpired(document), lines, sourceNumber, linkedInvoices, linkedDeliveryOrders };
 }
 
 

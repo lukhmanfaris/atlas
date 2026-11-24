@@ -6,6 +6,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import { App } from "./App";
 import { CompanyProvider } from "./company";
 import { CustomerDetailPage } from "./pages/customer-detail";
+import { DeliveryOrderEditorPage } from "./pages/delivery-order-editor";
 import { CustomersPage } from "./pages/customers";
 import { HomePage } from "./pages/home";
 import { ItemsPage } from "./pages/items";
@@ -35,6 +36,9 @@ const router = createBrowserRouter([
       { path: "invoices/new", element: <QuotationEditorPage documentType="invoice" /> },
       { path: "invoices/:documentId", element: <QuotationViewPage documentType="invoice" /> },
       { path: "invoices/:documentId/edit", element: <QuotationEditorPage documentType="invoice" /> },
+      { path: "delivery-orders", element: <QuotationsPage documentType="delivery_order" /> },
+      { path: "delivery-orders/:documentId", element: <QuotationViewPage documentType="delivery_order" /> },
+      { path: "delivery-orders/:documentId/edit", element: <DeliveryOrderEditorPage /> },
       { path: "quotations/new", element: <QuotationEditorPage /> },
       { path: "quotations/:documentId", element: <QuotationViewPage /> },
       { path: "quotations/:documentId/edit", element: <QuotationEditorPage /> },

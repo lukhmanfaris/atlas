@@ -162,7 +162,7 @@ import type {
 
 export function listQuotations(
   companyId: string,
-  options: { status?: string; q?: string; type?: "quotation" | "invoice" } = {},
+  options: { status?: string; q?: string; type?: "quotation" | "invoice" | "delivery_order" } = {},
 ) {
   const params = new URLSearchParams({ type: options.type ?? "quotation" });
   if (options.status) params.set("status", options.status);
@@ -237,4 +237,35 @@ export function documentPdfUrl(documentId: string) {
 
 export function documentPreviewUrl(documentId: string) {
   return `${BASE}/documents/${documentId}/preview`;
+}
+
+export function createDeliveryOrder(companyId: string, invoiceId: string) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${invoiceId}/delivery-orders`,
+    { method: "POST" },
+    companyId,
+  );
+}
+
+export function getDeliveryRemaining(companyId: string, invoiceId: string) {
+  return request<{
+    lines: {
+      lineId: string;
+      lineNo: number;
+      sku: string | null;
+      description: string;
+      unit: string;
+      invoicedMilli: number;
+      deliveredMilli: number;
+      remainingMilli: number;
+    }[];
+  }>(`/documents/${invoiceId}/delivery-remaining`, {}, companyId);
+}
+
+export function markDelivered(companyId: string, documentId: string, receivedBy: string) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/mark-delivered`,
+    { method: "POST", body: JSON.stringify({ receivedBy: receivedBy || null }) },
+    companyId,
+  );
 }

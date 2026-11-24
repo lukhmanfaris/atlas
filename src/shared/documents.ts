@@ -87,6 +87,7 @@ export type DocumentLineDto = {
   unitPriceSen: number | null;
   discountSen: number;
   lineTotalSen: number | null;
+  sourceLineId: string | null;
 };
 
 /** What the API returns for one document, plus its lines. */
@@ -113,6 +114,7 @@ export type DocumentDto = {
   sourceDocumentId: string | null;
   sourceNumber?: string | null;
   linkedInvoices?: { id: string; number: string | null; status: string }[];
+  linkedDeliveryOrders?: { id: string; number: string | null; status: string }[];
   lines: DocumentLineDto[];
 };
 

@@ -25,13 +25,25 @@ import {
   documentPreviewUrl,
   getQuotation,
   issueQuotation,
+  createDeliveryOrder,
+  getDeliveryRemaining,
   listCustomers,
+  markDelivered as markDeliveredRequest,
   voidQuotation,
 } from "../api";
 import { useCompany } from "../company";
 
-export function QuotationViewPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" }) {
-  const basePath = documentType === "invoice" ? "/invoices" : "/quotations";
+export function QuotationViewPage({
+  documentType = "quotation",
+}: {
+  documentType?: "quotation" | "invoice" | "delivery_order";
+}) {
+  const basePath =
+    documentType === "invoice"
+      ? "/invoices"
+      : documentType === "delivery_order"
+        ? "/delivery-orders"
+        : "/quotations";
   const { documentId } = useParams<{ documentId: string }>();
   const { company } = useCompany();
   const navigate = useNavigate();
@@ -73,6 +85,12 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
+  const markDelivered = useMutation({
+    mutationFn: (receivedBy: string) => markDeliveredRequest(company.id, documentId ?? "", receivedBy),
+    onSuccess: () => refresh(),
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
   const voidIt = useMutation({
     mutationFn: () => voidQuotation(company.id, documentId ?? "", reason),
     onSuccess: async () => {
@@ -110,20 +128,21 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
   const document = quotation.data.document;
   const customer = customers.data?.customers.find((entry) => entry.id === document.customerId);
   const isOwner = company.role === "owner";
+  const isDeliveryOrder = document.type === "delivery_order";
   const canVoid = ["issued", "accepted", "rejected"].includes(document.status);
 
   return (
     <div className="space-y-6">
       <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link to={basePath} />}>
         <ArrowLeft className="size-4" />
-        {documentType === "invoice" ? "Invoices" : "Quotations"}
+        {documentType === "invoice" ? "Invoices" : documentType === "delivery_order" ? "Delivery orders" : "Quotations"}
       </Button>
 
       <Card>
         <CardHeader className="gap-3 border-b sm:flex sm:flex-row sm:items-start sm:justify-between">
           <div>
             <CardTitle className="flex flex-wrap items-center gap-2 text-xl">
-              {document.number ?? `Draft ${documentType}`}
+              {document.number ?? `Draft ${documentType.replace("_", " ")}`}
               <Badge variant={document.expired ? "destructive" : "secondary"}>
                 {document.expired ? "expired" : document.status}
               </Badge>
@@ -140,7 +159,15 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
                   variant="outline"
                   size="sm"
                   nativeButton={false}
-                  render={<Link to={`${basePath}/${document.id}/edit`} />}
+                  render={
+                    <Link
+                      to={
+                        isDeliveryOrder
+                          ? `/delivery-orders/${document.id}/edit`
+                          : `${basePath}/${document.id}/edit`
+                      }
+                    />
+                  }
                 >
                   <Pencil className="size-4" />
                   Edit
@@ -184,6 +211,17 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
                 (document.status === "issued" || document.status === "accepted") ? (
                   <Button size="sm" onClick={() => convert.mutate()} disabled={convert.isPending}>
                     {convert.isPending ? "Converting…" : "Convert to invoice"}
+                  </Button>
+                ) : null}
+                {isDeliveryOrder && document.status === "issued" ? (
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const receivedBy = window.prompt("Received by (optional)") ?? "";
+                      markDelivered.mutate(receivedBy);
+                    }}
+                  >
+                    Mark delivered
                   </Button>
                 ) : null}
                 {canVoid && isOwner ? (
@@ -238,9 +276,13 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
                   <th className="py-2 pr-3">Description</th>
                   <th className="py-2 pr-3 text-right">Qty</th>
                   <th className="py-2 pr-3">Unit</th>
-                  <th className="py-2 pr-3 text-right">Price</th>
-                  <th className="py-2 pr-3 text-right">Discount</th>
-                  <th className="py-2 text-right">Amount</th>
+                  {isDeliveryOrder ? null : (
+                    <>
+                      <th className="py-2 pr-3 text-right">Price</th>
+                      <th className="py-2 pr-3 text-right">Discount</th>
+                      <th className="py-2 text-right">Amount</th>
+                    </>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -257,22 +299,26 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
                       {milliToQty(line.quantityMilli)}
                     </td>
                     <td className="py-2 pr-3">{line.unit}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {formatRinggit(line.unitPriceSen ?? 0)}
-                    </td>
-                    <td className="py-2 pr-3 text-right tabular-nums">
-                      {formatRinggit(line.discountSen)}
-                    </td>
-                    <td className="py-2 text-right tabular-nums">
-                      {formatRinggit(line.lineTotalSen ?? 0)}
-                    </td>
+                    {isDeliveryOrder ? null : (
+                      <>
+                        <td className="py-2 pr-3 text-right tabular-nums">
+                          {formatRinggit(line.unitPriceSen ?? 0)}
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">
+                          {formatRinggit(line.discountSen)}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatRinggit(line.lineTotalSen ?? 0)}
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
 
-          <div className="ml-auto w-full max-w-xs space-y-1 text-sm">
+          <div className={isDeliveryOrder ? "hidden" : "ml-auto w-full max-w-xs space-y-1 text-sm"}>
             <p className="flex justify-between">
               <span className="text-muted-foreground">Subtotal</span>
               <span className="tabular-nums">{formatRinggit(document.subtotalSen)}</span>
@@ -287,8 +333,15 @@ export function QuotationViewPage({ documentType = "quotation" }: { documentType
             </p>
           </div>
 
-          {document.amountInWords ? (
+          {!isDeliveryOrder && document.amountInWords ? (
             <p className="text-xs text-muted-foreground">{document.amountInWords}</p>
+          ) : null}
+
+          {document.type === "invoice" ? (
+            <InvoiceDeliverySection
+              invoiceId={document.id}
+              linked={document.linkedDeliveryOrders ?? []}
+            />
           ) : null}
 
           {document.notes ? <Section title="Notes" value={document.notes} /> : null}
@@ -344,6 +397,80 @@ function Section({ title, value }: { title: string; value: string }) {
     <section className="space-y-1">
       <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
       <p className="whitespace-pre-line text-sm">{value}</p>
+    </section>
+  );
+}
+
+function InvoiceDeliverySection({
+  invoiceId,
+  linked,
+}: {
+  invoiceId: string;
+  linked: { id: string; number: string | null; status: string }[];
+}) {
+  const { company } = useCompany();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const remaining = useQuery({
+    queryKey: ["delivery-remaining", company.id, invoiceId],
+    queryFn: () => getDeliveryRemaining(company.id, invoiceId),
+  });
+
+  const create = useMutation({
+    mutationFn: () => createDeliveryOrder(company.id, invoiceId),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({ queryKey: ["delivery-remaining", company.id, invoiceId] });
+      navigate(`/delivery-orders/${result.document.id}`);
+    },
+  });
+
+  const lines = remaining.data?.lines ?? [];
+  const anyLeft = lines.some((line) => line.remainingMilli > 0);
+
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Delivery
+        </h2>
+        <Button
+          size="sm"
+          variant="outline"
+          disabled={!anyLeft || create.isPending}
+          onClick={() => create.mutate()}
+        >
+          {create.isPending ? "Creating…" : "Create delivery order"}
+        </Button>
+      </div>
+
+      {lines.length > 0 ? (
+        <ul className="space-y-1 text-sm">
+          {lines.map((line) => (
+            <li key={line.lineId} className="flex justify-between gap-4 border-b pb-1">
+              <span className="min-w-0 truncate">{line.description}</span>
+              <span className="whitespace-nowrap text-muted-foreground">
+                {milliToQty(line.deliveredMilli)} delivered · {milliToQty(line.remainingMilli)} left
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {linked.length > 0 ? (
+        <p className="text-sm">
+          {linked.map((entry) => (
+            <Link
+              key={entry.id}
+              to={`/delivery-orders/${entry.id}`}
+              className="mr-2 underline-offset-4 hover:underline"
+            >
+              {entry.number ?? "draft"} ({entry.status})
+            </Link>
+          ))}
+        </p>
+      ) : null}
+
+      {create.isError ? <p className="text-sm text-destructive">{create.error.message}</p> : null}
     </section>
   );
 }

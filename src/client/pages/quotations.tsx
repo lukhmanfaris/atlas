@@ -49,7 +49,7 @@ function statusBadge(status: string, expired: boolean) {
   return <Badge variant="outline">{status}</Badge>;
 }
 
-export function QuotationsPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" }) {
+export function QuotationsPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" | "delivery_order" }) {
   const { company } = useCompany();
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
@@ -71,16 +71,18 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">
-            {documentType === "invoice" ? "Invoices" : "Quotations"}
+            {documentType === "invoice" ? "Invoices" : documentType === "delivery_order" ? "Delivery orders" : "Quotations"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {documentType === "invoice" ? "Invoices" : "Quotations"} issued by {company.name}.
+            {documentType === "invoice" ? "Invoices" : documentType === "delivery_order" ? "Delivery orders" : "Quotations"} issued by {company.name}.
           </p>
         </div>
-        <Button nativeButton={false} render={<Link to={`/${documentType === "invoice" ? "invoices" : "quotations"}/new`} />}>
-          <Plus className="size-4" />
-          {documentType === "invoice" ? "New invoice" : "New quotation"}
-        </Button>
+        {documentType === "delivery_order" ? null : (
+          <Button nativeButton={false} render={<Link to={`/${documentType === "invoice" ? "invoices" : "quotations"}/new`} />}>
+            <Plus className="size-4" />
+            {documentType === "invoice" ? "New invoice" : "New quotation"}
+          </Button>
+        )}
       </header>
 
       <Card>
@@ -138,7 +140,7 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
                   <TableRow key={row.id}>
                     <TableCell>
                       <Link
-                        to={`/${documentType === "invoice" ? "invoices" : "quotations"}/${row.id}`}
+                        to={`/${documentType === "invoice" ? "invoices" : documentType === "delivery_order" ? "delivery-orders" : "quotations"}/${row.id}`}
                         className="font-medium underline-offset-4 hover:underline"
                       >
                         {row.number ?? "Draft"}

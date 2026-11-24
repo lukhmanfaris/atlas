@@ -629,7 +629,7 @@
       "title": "Delivery orders from invoices",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-08"],
       "acceptance_criteria": [
         "From an issued invoice, Create delivery order makes a draft with every line that still has remaining quantity, prefilled with that remaining quantity, and the customer's delivery address.",
