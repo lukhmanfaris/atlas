@@ -17,6 +17,7 @@
   // `npm run dev` uses this. Deploys always pass CLOUDFLARE_ENV.
   "vars": {
     "ENVIRONMENT": "development",
+    "PDF_RENDERING": "on",
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": "",
     "DEV_AUTH_EMAIL": "halfxindustries@gmail.com"
@@ -41,6 +42,7 @@
       // Real ids are filled in by `wrangler d1 create` / `wrangler r2 bucket create`.
       "vars": {
         "ENVIRONMENT": "staging",
+        "PDF_RENDERING": "on",
         "DEV_AUTH_EMAIL": "",
         "ACCESS_TEAM_DOMAIN": "https://atlas-docs.cloudflareaccess.com",
         "ACCESS_AUD": "f794366b02b3c3b226103fd4f39d91691940e71632784ea24edeaf5e2cebe147"
@@ -64,6 +66,7 @@
     "production": {
       "vars": {
         "ENVIRONMENT": "production",
+        "PDF_RENDERING": "on",
         "DEV_AUTH_EMAIL": "",
         "ACCESS_TEAM_DOMAIN": "",
         "ACCESS_AUD": ""

@@ -3,7 +3,7 @@ import { uuidv7 } from "uuidv7";
 
 import app from "@/worker";
 import { createDb } from "@/worker/db/client";
-import { companies, companyMembers, users } from "@/worker/db/schema";
+import { companies, companyMembers, customers, users } from "@/worker/db/schema";
 
 /** Builds the Worker env for one request, optionally switching the signed-in email. */
 function bindings(overrides: Record<string, unknown>): Env {
@@ -94,6 +94,25 @@ export async function seedMembership(
   await createDb(env.DB)
     .insert(companyMembers)
     .values({ companyId, userId, role, createdAt: Date.now() });
+}
+
+export async function seedCustomer(
+  companyId: string,
+  name = "Maju Jaya Sdn Bhd",
+): Promise<string> {
+  const id = uuidv7();
+  const now = Date.now();
+  await createDb(env.DB)
+    .insert(customers)
+    .values({
+      id,
+      companyId,
+      name,
+      billingAddress: "15 Jalan Perdagangan\n50000 Kuala Lumpur",
+      createdAt: now,
+      updatedAt: now,
+    });
+  return id;
 }
 
 export async function uniqueEmail(prefix: string): Promise<string> {

@@ -8,6 +8,8 @@ export type IssueNumberInput = {
   issueDate: string;
   issuedAt: number;
   issuedBy: string;
+  /** Extra statements to run in the same transaction, e.g. the audit row. */
+  extraStatements?: D1PreparedStatement[];
 };
 
 export type IssueNumberResult = {
@@ -123,6 +125,7 @@ export async function issueDocumentNumber(
         companyId,
         type,
       ),
+    ...(input.extraStatements ?? []),
   ]);
 
   if ((advance?.meta.changes ?? 0) === 0 || (stamp?.meta.changes ?? 0) === 0) {

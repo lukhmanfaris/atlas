@@ -23,6 +23,7 @@ export default defineConfig(async () => {
           // SQL migrations so each test file starts from the real schema.
           bindings: {
             ENVIRONMENT: "test",
+            PDF_RENDERING: "off",
             DEV_AUTH_EMAIL: "",
             ACCESS_TEAM_DOMAIN: "",
             ACCESS_AUD: "",

@@ -67,6 +67,17 @@ export type LoadedDocument = {
   model: PdfModel;
 };
 
+export async function companySnapshot(d1: D1Database, companyId: string): Promise<CompanySnapshot> {
+  return liveCompany(d1, companyId);
+}
+
+export async function customerSnapshot(
+  d1: D1Database,
+  customerId: string,
+): Promise<CustomerSnapshot> {
+  return liveCustomer(d1, customerId);
+}
+
 async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySnapshot> {
   const row = await d1
     .prepare(
