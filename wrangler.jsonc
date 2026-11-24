@@ -1,0 +1,86 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "atlas",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-24",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "upload_source_maps": true,
+  "workers_dev": true,
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  // Top level is the local development environment only.
+  // `npm run dev` uses this. Deploys always pass CLOUDFLARE_ENV.
+  "vars": {
+    "ENVIRONMENT": "development",
+    "ACCESS_TEAM_DOMAIN": "",
+    "ACCESS_AUD": "",
+    "DEV_AUTH_EMAIL": "owner@example.com"
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "atlas-local",
+      "database_id": "00000000-0000-4000-8000-000000000001",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "atlas-files-local", "preview_bucket_name": "atlas-files-local" },
+    { "binding": "BACKUPS", "bucket_name": "atlas-backups-local", "preview_bucket_name": "atlas-backups-local" }
+  ],
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "env": {
+    "staging": {
+      // Real ids are filled in by `wrangler d1 create` / `wrangler r2 bucket create`.
+      "vars": {
+        "ENVIRONMENT": "staging",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "atlas-staging",
+          "database_id": "00000000-0000-4000-8000-000000000002",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "FILES", "bucket_name": "atlas-files-staging" },
+        { "binding": "BACKUPS", "bucket_name": "atlas-backups-staging" }
+      ],
+      "browser": {
+        "binding": "BROWSER"
+      }
+    },
+    "production": {
+      "vars": {
+        "ENVIRONMENT": "production",
+        "ACCESS_TEAM_DOMAIN": "",
+        "ACCESS_AUD": ""
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "atlas-production",
+          "database_id": "00000000-0000-4000-8000-000000000003",
+          "migrations_dir": "migrations"
+        }
+      ],
+      "r2_buckets": [
+        { "binding": "FILES", "bucket_name": "atlas-files-production" },
+        { "binding": "BACKUPS", "bucket_name": "atlas-backups-production" }
+      ],
+      "browser": {
+        "binding": "BROWSER"
+      }
+    }
+  }
+}

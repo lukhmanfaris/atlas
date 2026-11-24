@@ -1,0 +1,746 @@
+{
+  "spec_version": "1.0.0",
+  "updated": "2026-11-24",
+
+  "agent_instructions": {
+    "role": "You are the senior full-stack engineer building this app together with the owner, who has limited coding experience. Explain what you are about to do in plain language before running commands or changing the data model.",
+    "source_of_truth": "This file defines the data model, business rules, features and acceptance criteria. PROJECT.md explains the why. CLAUDE.md holds coding rules and commands. If they disagree, this file wins for behaviour and CLAUDE.md wins for code style.",
+    "workflow": [
+      "Work one feature at a time, in milestone order (M0, M1, M2, M3). Do not start a feature until every id in its depends_on list is done.",
+      "Before coding a feature: restate its acceptance criteria, list the files you will create or change, and point out anything in this spec that is unclear.",
+      "Ask the owner before any change to the data model, a new dependency, or anything listed in out_of_scope.",
+      "Write the tests for a feature's acceptance criteria first, then the code. A feature is done only when each criterion has a passing automated test or a written manual check, and `npm run check` passes.",
+      "Never guess a business rule. If the spec is silent or contradicts itself, stop and ask.",
+      "When a decision changes this spec, update spec.json in the same commit and add an entry to decision_log.",
+      "After finishing a feature, set its status to \"done\" in this file and summarise what changed in one short paragraph."
+    ],
+    "kickoff_prompt": "Read PROJECT.md, CLAUDE.md and spec.json in full. Then start milestone M0 (feature F-00): scaffold the project exactly as described in stack and repo_layout, create the D1 schema for every entity with Drizzle migrations, and deploy a page that says 'Hello' behind Cloudflare Access to the staging Worker. Explain each step in plain language before you run it, and stop for my confirmation before creating any Cloudflare resources.",
+    "feature_prompt_template": "Implement {feature_id} ({title}) from spec.json. First restate the acceptance criteria and list the files you will touch, then write failing tests, then the code, then run `npm run check`. Stop and ask if anything is unclear."
+  },
+
+  "project": {
+    "name": "SME Invoice and Delivery Order App",
+    "slug": "invoice-do",
+    "summary": "Internal web app for a small Malaysian business group to create branded quotations, invoices and delivery orders for several companies, and keep them as PDFs for 7 years.",
+    "users": "1 to 5 internal staff. No customer logins.",
+    "companies": "Several legal entities, each with its own logo, registration number, address, bank details and document numbering.",
+    "language": "English UI and documents for v1.",
+    "locale": {
+      "timezone": "Asia/Kuala_Lumpur",
+      "date_display": "DD/MM/YYYY",
+      "currency": "MYR",
+      "money_display": "RM 1,234.50"
+    },
+    "hosting": "Cloud only (Cloudflare). Local machine is for development only."
+  },
+
+  "business_context": {
+    "sst_registered": false,
+    "foreign_currency": false,
+    "myinvois_mandatory": false,
+    "myinvois_note": "All companies, including related companies, are below RM3 million annual revenue, so MyInvois e-invoicing is not mandatory. Keep the optional fields listed under future_ready so it can be added later without a schema rewrite.",
+    "tax_agent": "Not appointed yet.",
+    "email_sending": "Deferred to the next phase. v1 lets staff download PDFs and send them from their own mailbox."
+  },
+
+  "compliance": {
+    "sst": [
+      "No company is SST-registered. Documents must not charge SST, must not show SST lines, and must be titled INVOICE, never TAX INVOICE.",
+      "Keep tax columns in the schema with default 0 and hide them in the UI while company.sst_registered is false, so registration later is a settings change."
+    ],
+    "record_keeping": [
+      "Keep issued documents and their PDFs for at least 7 years.",
+      "Issued documents are never hard-deleted or edited. Corrections are made by voiding and re-issuing; a voided document keeps its number.",
+      "Every issued PDF is stored once in R2 with its SHA-256 hash recorded."
+    ],
+    "pdpa": [
+      "Collect only what documents need: customer name, registration number, addresses, contact person, phone, email.",
+      "Do not store NRIC or passport numbers in v1.",
+      "Only staff who pass Cloudflare Access can reach any data.",
+      "Accept the data processing terms of Cloudflare and GitHub, and keep a one-page record of where data is stored (Cloudflare, APAC location hint).",
+      "Publish a short privacy notice to customers, in English and Bahasa Malaysia, saying invoices and contact details are kept in a cloud service.",
+      "A data protection officer is not required unless the business processes personal data of more than 20,000 people."
+    ]
+  },
+
+  "stack": {
+    "runtime": "Cloudflare Workers (one Worker serves the React app as static assets and the API under /api)",
+    "api_framework": "Hono",
+    "validation": "Zod, schemas shared between client and server in src/shared",
+    "frontend": "React + Vite + TypeScript, React Router, TanStack Query, Tailwind CSS, shadcn/ui",
+    "database": "Cloudflare D1 (SQLite), created with location hint \"apac\", read replication OFF",
+    "orm": "Drizzle ORM with drizzle-kit generated SQL migrations",
+    "file_storage": "Cloudflare R2: one private bucket for logos and issued PDFs, one private bucket for backups",
+    "auth": "Cloudflare Access (email one-time PIN) in front of the whole app; the Worker validates the Cf-Access-Jwt-Assertion header on every /api request",
+    "pdf": "Server-rendered HTML templates (Hono JSX) converted to PDF by Cloudflare Browser Run through the Workers browser binding (@cloudflare/puppeteer)",
+    "testing": "Vitest with @cloudflare/vitest-pool-workers for API and service tests; Playwright for a few end-to-end flows",
+    "ci_cd": "GitHub Actions: check on every push, deploy to staging on main, deploy to production on a version tag",
+    "backup": "D1 Time Travel plus a nightly GitHub Actions job running `wrangler d1 export` into the backup R2 bucket",
+    "package_manager": "npm",
+    "versions": "Use the latest stable version of each package at scaffold time and pin them in package-lock.json."
+  },
+
+  "platform_limits": {
+    "note": "Workers Free plan limits that the design must respect. Checked 2026-11-24.",
+    "workers": "100,000 requests/day; 10 ms CPU per request",
+    "d1": "Max database 500 MB; 5 million rows read and 100,000 rows written per day; 50 queries per Worker invocation (one db.batch counts as one); 100 bound parameters per query; 7-day Time Travel",
+    "r2": "10 GB storage free; no egress fees",
+    "browser_run": "10 browser-minutes per day; 3 concurrent browsers",
+    "access": "Free for up to 50 users",
+    "design_consequences": [
+      "Insert document lines with db.batch and chunk any multi-row insert so no statement has more than 100 bound parameters.",
+      "Keep CPU-heavy work (PDF rendering) in Browser Run, not in the Worker.",
+      "Generate a PDF once at issue time and serve the stored copy afterwards."
+    ]
+  },
+
+  "environments": [
+    { "name": "local", "how": "wrangler dev / vite dev with local D1 and R2 emulation", "data": "Seed script with fake companies, customers and items" },
+    { "name": "staging", "how": "Separate Worker, D1 database and R2 buckets, behind Cloudflare Access", "data": "Fake data only" },
+    { "name": "production", "how": "Separate Worker, D1 database and R2 buckets, behind Cloudflare Access", "data": "Real data" }
+  ],
+
+  "repo_layout": {
+    "PROJECT.md": "Project brief for humans and agents",
+    "CLAUDE.md": "Rules and commands for the coding agent",
+    "spec.json": "This file",
+    "wrangler.jsonc": "Worker config: env.staging and env.production, bindings DB, FILES, BACKUPS, BROWSER",
+    "drizzle.config.ts": "Drizzle config for D1",
+    "migrations/": "Generated SQL migrations; never edit an applied migration",
+    "src/worker/index.ts": "Hono app entry: mounts /api routes and serves static assets",
+    "src/worker/auth/": "Access JWT validation, current user, company membership and role checks",
+    "src/worker/routes/": "One file per resource: companies, customers, items, documents, export",
+    "src/worker/services/": "Business logic: numbering.ts, documents.ts, totals.ts, amount-in-words.ts, pdf.ts, audit.ts",
+    "src/worker/db/": "schema.ts (Drizzle tables), client.ts, data access helpers that always take companyId",
+    "src/worker/pdf/": "Hono JSX templates: layout, quotation, invoice, delivery-order",
+    "src/shared/": "Zod schemas, enums and TypeScript types used by both sides",
+    "src/client/": "React app: routes, pages, components, api client",
+    "scripts/": "seed.ts, backup helpers",
+    "tests/": "Vitest unit and API tests; e2e/ for Playwright",
+    ".github/workflows/": "ci.yml, deploy.yml, backup.yml"
+  },
+
+  "conventions": {
+    "ids": "TEXT primary keys using UUIDv7 (time-ordered)",
+    "timestamps": "INTEGER Unix milliseconds in UTC for created_at, updated_at, issued_at and similar",
+    "business_dates": "TEXT 'YYYY-MM-DD' in Malaysia time for issue_date, due_date, valid_until, delivery_date",
+    "money": "INTEGER sen (RM 12.50 = 1250). Never use floating point for money.",
+    "quantity": "INTEGER thousandths (2.5 kg = 2500) so decimal quantities are exact",
+    "rounding": "Round half up to the nearest sen, per line, then sum lines",
+    "company_scope": "Every table except users carries company_id, and every query filters by the current company taken from the X-Company-Id header after a membership check",
+    "soft_delete": "Customers and items are archived (is_archived = 1), never deleted, because issued documents refer to them",
+    "naming": "snake_case in SQL, camelCase in TypeScript"
+  },
+
+  "roles": [
+    {
+      "role": "owner",
+      "can": ["everything staff can", "edit company settings and logo", "manage users and roles", "void issued documents", "export data"]
+    },
+    {
+      "role": "staff",
+      "can": ["manage customers and items", "create, edit and delete draft documents", "issue documents", "convert quotations", "create delivery orders", "mark delivery orders delivered", "download PDFs"]
+    }
+  ],
+
+  "entities": [
+    {
+      "table": "companies",
+      "description": "A legal entity that issues documents.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "name", "type": "text", "required": true },
+        { "name": "registration_no", "type": "text", "required": true, "notes": "SSM registration number as printed on documents" },
+        { "name": "address_line1", "type": "text", "required": true },
+        { "name": "address_line2", "type": "text" },
+        { "name": "address_line3", "type": "text" },
+        { "name": "postcode", "type": "text", "required": true },
+        { "name": "city", "type": "text", "required": true },
+        { "name": "state", "type": "text", "required": true },
+        { "name": "country", "type": "text", "required": true, "default": "Malaysia" },
+        { "name": "phone", "type": "text" },
+        { "name": "email", "type": "text" },
+        { "name": "website", "type": "text" },
+        { "name": "logo_r2_key", "type": "text", "notes": "PNG or JPEG, max 1 MB, shown max 30 mm tall on PDFs" },
+        { "name": "brand_color", "type": "text", "default": "#111827", "notes": "Hex colour for headings on PDFs" },
+        { "name": "bank_name", "type": "text" },
+        { "name": "bank_account_name", "type": "text" },
+        { "name": "bank_account_no", "type": "text" },
+        { "name": "default_payment_terms_days", "type": "integer", "required": true, "default": 30 },
+        { "name": "quotation_validity_days", "type": "integer", "required": true, "default": 30 },
+        { "name": "prefix_quotation", "type": "text", "required": true, "default": "QT" },
+        { "name": "prefix_invoice", "type": "text", "required": true, "default": "INV" },
+        { "name": "prefix_delivery_order", "type": "text", "required": true, "default": "DO" },
+        { "name": "quotation_terms", "type": "text", "notes": "Default terms printed on quotations" },
+        { "name": "invoice_notes", "type": "text", "notes": "Default notes printed on invoices, e.g. payment instructions" },
+        { "name": "delivery_order_notes", "type": "text" },
+        { "name": "sst_registered", "type": "integer", "required": true, "default": 0, "notes": "Boolean. 0 for all companies in v1" },
+        { "name": "sst_no", "type": "text", "notes": "Reserved for future SST registration" },
+        { "name": "tin", "type": "text", "notes": "Reserved for future MyInvois" },
+        { "name": "msic_code", "type": "text", "notes": "Reserved for future MyInvois" },
+        { "name": "is_archived", "type": "integer", "required": true, "default": 0 },
+        { "name": "created_at", "type": "integer", "required": true },
+        { "name": "updated_at", "type": "integer", "required": true }
+      ]
+    },
+    {
+      "table": "users",
+      "description": "A staff member, identified by the email Cloudflare Access verified.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "email", "type": "text", "required": true, "unique": true, "notes": "Stored lowercase" },
+        { "name": "name", "type": "text", "required": true },
+        { "name": "is_active", "type": "integer", "required": true, "default": 1 },
+        { "name": "created_at", "type": "integer", "required": true }
+      ]
+    },
+    {
+      "table": "company_members",
+      "description": "Which users can work in which company, and with what role.",
+      "primary_key": ["company_id", "user_id"],
+      "fields": [
+        { "name": "company_id", "type": "text", "required": true, "references": "companies.id" },
+        { "name": "user_id", "type": "text", "required": true, "references": "users.id" },
+        { "name": "role", "type": "text", "required": true, "enum": ["owner", "staff"] },
+        { "name": "created_at", "type": "integer", "required": true }
+      ]
+    },
+    {
+      "table": "customers",
+      "description": "A buyer of one company.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "company_id", "type": "text", "required": true, "references": "companies.id" },
+        { "name": "name", "type": "text", "required": true },
+        { "name": "registration_no", "type": "text" },
+        { "name": "contact_person", "type": "text" },
+        { "name": "phone", "type": "text" },
+        { "name": "email", "type": "text" },
+        { "name": "billing_address", "type": "text", "required": true, "notes": "Multi-line text as printed" },
+        { "name": "delivery_address", "type": "text", "notes": "Default delivery address; falls back to billing_address" },
+        { "name": "payment_terms_days", "type": "integer", "notes": "Overrides the company default when set" },
+        { "name": "notes", "type": "text" },
+        { "name": "tin", "type": "text", "notes": "Reserved for future MyInvois" },
+        { "name": "is_archived", "type": "integer", "required": true, "default": 0 },
+        { "name": "created_at", "type": "integer", "required": true },
+        { "name": "updated_at", "type": "integer", "required": true }
+      ],
+      "indexes": [["company_id", "name"]]
+    },
+    {
+      "table": "items",
+      "description": "A product or service in one company's catalogue.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "company_id", "type": "text", "required": true, "references": "companies.id" },
+        { "name": "sku", "type": "text", "notes": "Unique per company when set" },
+        { "name": "name", "type": "text", "required": true },
+        { "name": "description", "type": "text" },
+        { "name": "unit", "type": "text", "required": true, "default": "pcs", "notes": "e.g. pcs, box, kg, m, hour, lot" },
+        { "name": "unit_price_sen", "type": "integer", "required": true, "default": 0 },
+        { "name": "classification_code", "type": "text", "notes": "Reserved for future MyInvois" },
+        { "name": "is_archived", "type": "integer", "required": true, "default": 0 },
+        { "name": "created_at", "type": "integer", "required": true },
+        { "name": "updated_at", "type": "integer", "required": true }
+      ],
+      "indexes": [["company_id", "name"], { "unique": ["company_id", "sku"] }]
+    },
+    {
+      "table": "documents",
+      "description": "Quotations, invoices and delivery orders in one table, told apart by type.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "company_id", "type": "text", "required": true, "references": "companies.id" },
+        { "name": "type", "type": "text", "required": true, "enum": ["quotation", "invoice", "delivery_order"] },
+        { "name": "status", "type": "text", "required": true, "notes": "See state_machines for allowed values per type" },
+        { "name": "number", "type": "text", "unique_with": "company_id", "notes": "Null while draft. Format in numbering" },
+        { "name": "seq", "type": "integer", "notes": "Null while draft" },
+        { "name": "seq_year", "type": "integer", "notes": "Year of issue_date, null while draft" },
+        { "name": "customer_id", "type": "text", "required": true, "references": "customers.id" },
+        { "name": "customer_snapshot", "type": "text", "notes": "JSON copy of the customer (name, registration_no, contact, phone, email, billing_address) frozen at issue" },
+        { "name": "company_snapshot", "type": "text", "notes": "JSON copy of the company details and logo key frozen at issue" },
+        { "name": "issue_date", "type": "text", "required": true },
+        { "name": "due_date", "type": "text", "notes": "Invoice only: issue_date + payment terms" },
+        { "name": "valid_until", "type": "text", "notes": "Quotation only: issue_date + validity days" },
+        { "name": "delivery_date", "type": "text", "notes": "Delivery order only" },
+        { "name": "delivery_address", "type": "text", "notes": "Delivery order required; invoice optional" },
+        { "name": "reference", "type": "text", "notes": "Customer PO number or other reference" },
+        { "name": "source_document_id", "type": "text", "references": "documents.id", "notes": "Invoice from quotation; delivery order from invoice" },
+        { "name": "notes", "type": "text" },
+        { "name": "terms", "type": "text" },
+        { "name": "subtotal_sen", "type": "integer", "required": true, "default": 0 },
+        { "name": "discount_sen", "type": "integer", "required": true, "default": 0, "notes": "Whole-document discount" },
+        { "name": "tax_sen", "type": "integer", "required": true, "default": 0, "notes": "Always 0 while not SST-registered" },
+        { "name": "total_sen", "type": "integer", "required": true, "default": 0 },
+        { "name": "amount_in_words", "type": "text", "notes": "Set at issue for quotations and invoices" },
+        { "name": "vehicle_no", "type": "text", "notes": "Delivery order only, optional" },
+        { "name": "driver_name", "type": "text", "notes": "Delivery order only, optional" },
+        { "name": "delivered_at", "type": "integer", "notes": "Delivery order only" },
+        { "name": "received_by", "type": "text", "notes": "Delivery order only: name of the person who received the goods" },
+        { "name": "pdf_r2_key", "type": "text", "notes": "Set at issue" },
+        { "name": "pdf_sha256", "type": "text", "notes": "Set at issue" },
+        { "name": "void_pdf_r2_key", "type": "text", "notes": "Copy of the PDF with a VOID watermark" },
+        { "name": "issued_at", "type": "integer" },
+        { "name": "issued_by", "type": "text", "references": "users.id" },
+        { "name": "voided_at", "type": "integer" },
+        { "name": "voided_by", "type": "text", "references": "users.id" },
+        { "name": "void_reason", "type": "text" },
+        { "name": "created_by", "type": "text", "required": true, "references": "users.id" },
+        { "name": "created_at", "type": "integer", "required": true },
+        { "name": "updated_at", "type": "integer", "required": true }
+      ],
+      "indexes": [["company_id", "type", "status"], ["company_id", "customer_id"], ["source_document_id"], { "unique": ["company_id", "number"] }]
+    },
+    {
+      "table": "document_lines",
+      "description": "Line items of a document.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "document_id", "type": "text", "required": true, "references": "documents.id", "on_delete": "cascade (drafts only)" },
+        { "name": "line_no", "type": "integer", "required": true },
+        { "name": "item_id", "type": "text", "references": "items.id", "notes": "Optional; free-text lines allowed" },
+        { "name": "sku", "type": "text", "notes": "Copied from the item" },
+        { "name": "description", "type": "text", "required": true },
+        { "name": "unit", "type": "text", "required": true },
+        { "name": "quantity_milli", "type": "integer", "required": true, "notes": "Greater than 0" },
+        { "name": "unit_price_sen", "type": "integer", "notes": "Null on delivery order lines" },
+        { "name": "discount_sen", "type": "integer", "required": true, "default": 0 },
+        { "name": "tax_rate_bp", "type": "integer", "required": true, "default": 0, "notes": "Basis points; always 0 in v1" },
+        { "name": "line_total_sen", "type": "integer", "notes": "Null on delivery order lines" },
+        { "name": "source_line_id", "type": "text", "references": "document_lines.id", "notes": "Invoice line from quotation line; delivery order line from invoice line" }
+      ],
+      "indexes": [["document_id", "line_no"], ["source_line_id"]]
+    },
+    {
+      "table": "number_sequences",
+      "description": "Next number per company, document type and year.",
+      "primary_key": ["company_id", "doc_type", "year"],
+      "fields": [
+        { "name": "company_id", "type": "text", "required": true, "references": "companies.id" },
+        { "name": "doc_type", "type": "text", "required": true, "enum": ["quotation", "invoice", "delivery_order"] },
+        { "name": "year", "type": "integer", "required": true },
+        { "name": "next_value", "type": "integer", "required": true, "default": 1 }
+      ]
+    },
+    {
+      "table": "audit_log",
+      "description": "Append-only record of important actions.",
+      "fields": [
+        { "name": "id", "type": "text", "required": true },
+        { "name": "company_id", "type": "text", "references": "companies.id" },
+        { "name": "user_id", "type": "text", "required": true, "references": "users.id" },
+        { "name": "action", "type": "text", "required": true, "notes": "e.g. document.issue, document.void, document.convert, company.update, member.add" },
+        { "name": "entity", "type": "text", "required": true },
+        { "name": "entity_id", "type": "text", "required": true },
+        { "name": "detail", "type": "text", "notes": "JSON" },
+        { "name": "at", "type": "integer", "required": true }
+      ],
+      "indexes": [["company_id", "at"]]
+    }
+  ],
+
+  "numbering": {
+    "format": "{prefix}-{YYYY}-{seq:4}",
+    "examples": ["QT-2026-0001", "INV-2026-0042", "DO-2026-0007"],
+    "rules": [
+      "One sequence per company, document type and calendar year. The year comes from issue_date in Malaysia time.",
+      "A number is assigned only when a draft is issued. Drafts have no number.",
+      "Numbers are gap-free: deleting a draft never uses up a number, and a voided document keeps its number.",
+      "seq grows past 9999 without breaking (it is padded to at least 4 digits).",
+      "Changing a prefix in settings affects only documents issued afterwards."
+    ],
+    "implementation": "D1 has no interactive transactions, so issue with one db.batch (which runs as a single transaction): (1) INSERT the sequence row if missing (INSERT OR IGNORE with next_value 1); (2) UPDATE number_sequences SET next_value = next_value + 1 WHERE company_id = ? AND doc_type = ? AND year = ? AND EXISTS (SELECT 1 FROM documents WHERE id = ? AND status = 'draft'); (3) UPDATE documents SET seq = (SELECT next_value - 1 FROM number_sequences WHERE ...), seq_year = ?, number = printf(...), status = 'issued', issued_at = ?, issued_by = ? WHERE id = ? AND status = 'draft'. Then verify the document now has a number; if not, return 409. Generate the PDF after the batch succeeds."
+  },
+
+  "state_machines": {
+    "quotation": {
+      "states": ["draft", "issued", "accepted", "rejected", "void"],
+      "transitions": [
+        { "from": "draft", "to": "issued", "action": "issue", "who": "staff" },
+        { "from": "draft", "to": "deleted", "action": "delete", "who": "staff", "notes": "Hard delete allowed only for drafts" },
+        { "from": "issued", "to": "accepted", "action": "accept", "who": "staff" },
+        { "from": "issued", "to": "rejected", "action": "reject", "who": "staff" },
+        { "from": "issued", "to": "void", "action": "void", "who": "owner", "requires": "reason" },
+        { "from": "accepted", "to": "accepted", "action": "convert_to_invoice", "who": "staff", "notes": "Creates a draft invoice; allowed once unless that invoice is void" }
+      ],
+      "derived": "Show 'Expired' in lists when status is issued and valid_until is before today. Expired is a label, not a stored state.",
+      "convert_rule": "Converting an issued quotation first marks it accepted, then creates the draft invoice."
+    },
+    "invoice": {
+      "states": ["draft", "issued", "void"],
+      "transitions": [
+        { "from": "draft", "to": "issued", "action": "issue", "who": "staff" },
+        { "from": "draft", "to": "deleted", "action": "delete", "who": "staff" },
+        { "from": "issued", "to": "void", "action": "void", "who": "owner", "requires": "reason", "guard": "Blocked while any non-void delivery order exists for this invoice" }
+      ]
+    },
+    "delivery_order": {
+      "states": ["draft", "issued", "delivered", "void"],
+      "transitions": [
+        { "from": "draft", "to": "issued", "action": "issue", "who": "staff" },
+        { "from": "draft", "to": "deleted", "action": "delete", "who": "staff" },
+        { "from": "issued", "to": "delivered", "action": "mark_delivered", "who": "staff", "fields": ["delivered_at", "received_by (optional)"] },
+        { "from": "issued", "to": "void", "action": "void", "who": "owner", "requires": "reason" },
+        { "from": "delivered", "to": "void", "action": "void", "who": "owner", "requires": "reason" }
+      ],
+      "creation_rule": "A delivery order can only be created from an issued invoice of the same company and customer."
+    }
+  },
+
+  "calculations": {
+    "line_total_sen": "round_half_up(quantity_milli * unit_price_sen / 1000) - discount_sen; must be >= 0",
+    "subtotal_sen": "sum of line_total_sen",
+    "total_sen": "subtotal_sen - discount_sen + tax_sen; must be >= 0; tax_sen is 0 in v1",
+    "amount_in_words": "English, upper case, e.g. 1250.50 -> 'RINGGIT MALAYSIA ONE THOUSAND TWO HUNDRED FIFTY AND SEN FIFTY ONLY'; 0 sen -> omit the SEN part",
+    "delivery_remaining": "For each invoice line: invoice quantity_milli minus the sum of quantity_milli on lines of non-void delivery orders (draft, issued or delivered) that point to it"
+  },
+
+  "pdf_layouts": {
+    "common": {
+      "page": "A4 portrait, 15 mm margins, 10 pt body text, table header repeats on each page, footer 'Page X of Y'",
+      "header": "Company logo (max 30 mm tall) at top left; company name, registration number, address, phone and email beside it; document title and number block at top right",
+      "customer_block": "Customer name, registration number, billing address, contact person and phone",
+      "generated_note": "Footer: 'This is a computer-generated document. No signature is required.' on quotations and invoices",
+      "void": "Voided documents get a copy with a diagonal VOID watermark; the original stored PDF is never overwritten"
+    },
+    "quotation": {
+      "title": "QUOTATION",
+      "meta": ["Quotation No.", "Date", "Valid Until", "Reference"],
+      "columns": ["No.", "Description", "Qty", "Unit", "Unit Price (RM)", "Discount (RM)", "Amount (RM)"],
+      "totals": ["Subtotal", "Discount", "Total (RM)"],
+      "below_totals": ["Amount in words", "Terms and conditions", "Optional 'Accepted by' block: name, signature and company stamp, date"]
+    },
+    "invoice": {
+      "title": "INVOICE",
+      "title_rule": "Never 'TAX INVOICE' while the company is not SST-registered",
+      "meta": ["Invoice No.", "Date", "Terms (e.g. 30 days)", "Due Date", "Reference", "Quotation No. (if converted)"],
+      "columns": ["No.", "Description", "Qty", "Unit", "Unit Price (RM)", "Discount (RM)", "Amount (RM)"],
+      "totals": ["Subtotal", "Discount", "Total (RM)"],
+      "below_totals": ["Amount in words", "Bank details for payment", "Notes"]
+    },
+    "delivery_order": {
+      "title": "DELIVERY ORDER",
+      "meta": ["DO No.", "Date", "Delivery Date", "Invoice No.", "Reference", "Vehicle No. (optional)", "Driver (optional)"],
+      "address_blocks": ["Bill To", "Deliver To"],
+      "columns": ["No.", "Item Code", "Description", "Qty", "Unit"],
+      "price_rule": "No prices, discounts or totals anywhere on a delivery order",
+      "signature_blocks": ["Issued by: name, signature, date", "Received in good order and condition by: name, signature and company stamp, date"]
+    }
+  },
+
+  "api": {
+    "base": "/api",
+    "auth": "Every request must carry a valid Cloudflare Access JWT. Company-scoped routes require the X-Company-Id header and a membership in that company.",
+    "errors": "JSON { error: { code, message, details? } } with 400 validation, 401 no Access token, 403 not a member or wrong role, 404 not found in this company, 409 invalid state transition",
+    "endpoints": [
+      { "method": "GET", "path": "/me", "returns": "user and their companies with roles" },
+      { "method": "GET", "path": "/companies/:id" },
+      { "method": "POST", "path": "/companies", "role": "owner" },
+      { "method": "PATCH", "path": "/companies/:id", "role": "owner" },
+      { "method": "PUT", "path": "/companies/:id/logo", "role": "owner", "notes": "multipart upload, PNG or JPEG, max 1 MB" },
+      { "method": "GET", "path": "/companies/:id/logo" },
+      { "method": "GET", "path": "/companies/:id/members", "role": "owner" },
+      { "method": "POST", "path": "/companies/:id/members", "role": "owner" },
+      { "method": "PATCH", "path": "/companies/:id/members/:userId", "role": "owner" },
+      { "method": "GET", "path": "/customers", "query": "q, include_archived" },
+      { "method": "POST", "path": "/customers" },
+      { "method": "GET", "path": "/customers/:id" },
+      { "method": "PATCH", "path": "/customers/:id" },
+      { "method": "GET", "path": "/items", "query": "q, include_archived" },
+      { "method": "POST", "path": "/items" },
+      { "method": "PATCH", "path": "/items/:id" },
+      { "method": "GET", "path": "/documents", "query": "type, status, customer_id, from, to, q, page" },
+      { "method": "POST", "path": "/documents", "notes": "Creates a draft quotation or invoice. Delivery orders are created through the invoice route below" },
+      { "method": "GET", "path": "/documents/:id", "returns": "document, lines, linked documents" },
+      { "method": "PATCH", "path": "/documents/:id", "notes": "Draft only; replaces lines" },
+      { "method": "DELETE", "path": "/documents/:id", "notes": "Draft only" },
+      { "method": "POST", "path": "/documents/:id/issue" },
+      { "method": "POST", "path": "/documents/:id/void", "role": "owner", "body": "{ reason }" },
+      { "method": "POST", "path": "/documents/:id/accept", "notes": "Quotation" },
+      { "method": "POST", "path": "/documents/:id/reject", "notes": "Quotation" },
+      { "method": "POST", "path": "/documents/:id/convert-to-invoice", "notes": "Quotation; returns the new draft invoice" },
+      { "method": "GET", "path": "/documents/:id/delivery-remaining", "notes": "Invoice; remaining quantity per line" },
+      { "method": "POST", "path": "/documents/:id/delivery-orders", "notes": "Invoice; creates a draft delivery order with remaining quantities" },
+      { "method": "POST", "path": "/documents/:id/mark-delivered", "body": "{ delivered_at, received_by? }", "notes": "Delivery order" },
+      { "method": "GET", "path": "/documents/:id/pdf", "notes": "Issued: the stored PDF (or VOID copy). Draft: a fresh preview PDF marked DRAFT" },
+      { "method": "GET", "path": "/documents/:id/preview", "notes": "HTML preview of the PDF template" },
+      { "method": "GET", "path": "/export/documents.csv", "role": "owner", "query": "type, from, to" }
+    ]
+  },
+
+  "screens": [
+    { "name": "Company switcher", "where": "Top bar on every page", "notes": "Shows company logo and name; remembers the last company per user" },
+    { "name": "Dashboard", "shows": "Drafts to finish, recently issued documents, invoices with undelivered quantities" },
+    { "name": "Customers", "shows": "Search list, create and edit form, archive" },
+    { "name": "Items", "shows": "Search list, create and edit form, archive" },
+    { "name": "Quotations", "shows": "List with status filter and Expired label; editor; view page with Issue, Accept, Reject, Convert to invoice, Download PDF, Void" },
+    { "name": "Invoices", "shows": "List with status filter; editor; view page with Issue, Create delivery order, Download PDF, Void, linked quotation and delivery orders" },
+    { "name": "Delivery orders", "shows": "List with status filter; editor showing remaining quantities; view page with Issue, Mark delivered, Download PDF, Void" },
+    { "name": "Settings", "shows": "Company profile, logo upload with preview, bank details, prefixes, default terms and notes, PDF colour; members (owner only)" }
+  ],
+
+  "features": [
+    {
+      "id": "F-00",
+      "title": "Project scaffold and deployment",
+      "milestone": "M0",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": [],
+      "acceptance_criteria": [
+        "The repository matches repo_layout, and `npm run dev`, `npm run check`, `npm run deploy:staging` work.",
+        "Staging and production each have their own Worker, D1 database (location hint apac, read replication off) and R2 buckets.",
+        "Opening the staging URL without passing Cloudflare Access shows the Access login; after login a 'Hello' page shows the user's email.",
+        "Calling /api/me without a valid Access JWT returns 401, even when requested through the workers.dev address, which is disabled.",
+        "GitHub Actions runs `npm run check` on every push and deploys staging from main."
+      ]
+    },
+    {
+      "id": "F-01",
+      "title": "Users, roles and company membership",
+      "milestone": "M1",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-00"],
+      "acceptance_criteria": [
+        "A seeded owner can add a staff member by email to a company and set the role.",
+        "A user who passes Access but is not in users, or is inactive, gets 403 with a clear message.",
+        "Requests with an X-Company-Id the user is not a member of return 403 and no data.",
+        "Staff cannot call owner-only endpoints (403); tests cover every owner-only endpoint."
+      ]
+    },
+    {
+      "id": "F-02",
+      "title": "Company profiles, logo and switcher",
+      "milestone": "M1",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-01"],
+      "acceptance_criteria": [
+        "The owner can create several companies and edit every field in the companies entity.",
+        "Uploading a PNG or JPEG up to 1 MB stores it in R2 and shows it in settings and in the top bar; other files or larger files are rejected with a message.",
+        "Switching company changes every list and form to that company's data only.",
+        "SST, TIN and MSIC fields are hidden in the UI while sst_registered is 0."
+      ]
+    },
+    {
+      "id": "F-03",
+      "title": "Customers",
+      "milestone": "M1",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-02"],
+      "acceptance_criteria": [
+        "Staff can create, edit, search by name and archive customers of the current company.",
+        "Archived customers are hidden from pickers but still appear on existing documents.",
+        "Name and billing address are required; email is validated when present."
+      ]
+    },
+    {
+      "id": "F-04",
+      "title": "Items",
+      "milestone": "M1",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-02"],
+      "acceptance_criteria": [
+        "Staff can create, edit, search by name or SKU, and archive items.",
+        "SKU is unique within a company when set; a duplicate shows a field error.",
+        "Unit price accepts up to 2 decimal places and is stored in sen."
+      ]
+    },
+    {
+      "id": "F-05",
+      "title": "Document numbering service",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-02"],
+      "acceptance_criteria": [
+        "Issuing produces numbers in the numbering format, per company, type and year.",
+        "Issuing 20 drafts in parallel for the same company and type yields 20 consecutive numbers with no duplicates or gaps.",
+        "Deleting a draft does not consume a number; a voided document keeps its number and the next issue gets the next value.",
+        "The first document issued with an issue_date in a new year gets 0001.",
+        "Issuing a document that is not a draft returns 409 and does not change any sequence."
+      ]
+    },
+    {
+      "id": "F-06",
+      "title": "PDF generation and archive",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-02"],
+      "acceptance_criteria": [
+        "Each document type renders to an A4 PDF matching pdf_layouts, with the company logo, and a 30-line document flows onto a second page with the table header repeated.",
+        "The HTML preview route and the PDF use the same template.",
+        "An issued document's PDF is generated once, stored in R2 under {company_id}/{type}/{year}/{number}.pdf, and served from R2 afterwards.",
+        "Draft PDFs show a DRAFT watermark and are never stored.",
+        "Voiding stores a separate VOID copy and keeps the original file unchanged.",
+        "If Browser Run fails, issuing still succeeds; the PDF is generated on the next download and the user sees a retry message, not an error page."
+      ]
+    },
+    {
+      "id": "F-07",
+      "title": "Quotations",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-03", "F-04", "F-05", "F-06"],
+      "acceptance_criteria": [
+        "Staff can create a draft quotation for a customer with item-based or free-text lines, edit it and delete it.",
+        "valid_until defaults to issue_date plus the company's quotation_validity_days.",
+        "Totals follow calculations exactly; tests cover rounding with decimal quantities and line discounts.",
+        "Issuing freezes the customer and company snapshots, assigns a number, stores the PDF in R2 and records its SHA-256.",
+        "Issued quotations cannot be edited (409); they can be accepted, rejected or voided by the owner with a reason.",
+        "Lists show an Expired label when issued and past valid_until."
+      ]
+    },
+    {
+      "id": "F-08",
+      "title": "Invoices",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-03", "F-04", "F-05", "F-06"],
+      "acceptance_criteria": [
+        "Staff can create, edit and delete draft invoices with the same line editor as quotations.",
+        "due_date defaults to issue_date plus the customer's payment terms, else the company default.",
+        "Issuing freezes snapshots, assigns a number, sets amount_in_words and stores the PDF.",
+        "The PDF title is INVOICE and shows no SST, while the company is not SST-registered.",
+        "Only the owner can void, with a reason; voiding is blocked with a clear message while non-void delivery orders exist."
+      ]
+    },
+    {
+      "id": "F-09",
+      "title": "Convert quotation to invoice",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-07", "F-08"],
+      "acceptance_criteria": [
+        "From an issued or accepted quotation, Convert creates a draft invoice with the same customer, lines, discounts, notes and reference, and source links on document and lines.",
+        "An issued quotation becomes accepted when converted.",
+        "A second conversion is blocked while a non-void invoice from that quotation exists.",
+        "The invoice view links back to the quotation, and the quotation view links to the invoice."
+      ]
+    },
+    {
+      "id": "F-10",
+      "title": "Delivery orders from invoices",
+      "milestone": "M2",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-08"],
+      "acceptance_criteria": [
+        "From an issued invoice, Create delivery order makes a draft with every line that still has remaining quantity, prefilled with that remaining quantity, and the customer's delivery address.",
+        "Staff can lower quantities or remove lines; a quantity above the remaining amount is rejected on save and on issue.",
+        "Several delivery orders per invoice are allowed (partial deliveries); the invoice view shows delivered and remaining quantity per line.",
+        "Delivery orders cannot be created from draft or void invoices.",
+        "No prices, discounts or totals appear in delivery order API responses, the DO editor or the DO PDF.",
+        "Mark delivered records delivered_at and the optional receiver name.",
+        "Voiding a delivery order returns its quantities to the invoice's remaining amount."
+      ]
+    },
+    {
+      "id": "F-11",
+      "title": "Lists, search and dashboard",
+      "milestone": "M3",
+      "priority": "should",
+      "status": "todo",
+      "depends_on": ["F-07", "F-08", "F-10"],
+      "acceptance_criteria": [
+        "Each document list filters by status, customer and date range, and searches by number or customer name.",
+        "Lists page at 50 rows and load in under 1 second with 5,000 documents in staging.",
+        "The dashboard shows drafts, the 10 latest issued documents and invoices with undelivered quantities."
+      ]
+    },
+    {
+      "id": "F-12",
+      "title": "Audit log",
+      "milestone": "M3",
+      "priority": "should",
+      "status": "todo",
+      "depends_on": ["F-07", "F-08", "F-10"],
+      "acceptance_criteria": [
+        "Issue, void, accept, reject, convert, mark delivered, company setting changes and member changes write an audit_log row in the same batch as the change.",
+        "The owner can view the audit log for the current company, newest first."
+      ]
+    },
+    {
+      "id": "F-13",
+      "title": "Backups and restore drill",
+      "milestone": "M3",
+      "priority": "must",
+      "status": "todo",
+      "depends_on": ["F-00"],
+      "acceptance_criteria": [
+        "A nightly GitHub Actions job exports the production D1 database with `wrangler d1 export` and stores it, compressed, in the backup R2 bucket under backups/YYYY/MM/DD.sql.gz.",
+        "An R2 lifecycle rule keeps backups for 7 years.",
+        "A documented restore drill rebuilds staging from last night's export, and the drill has been run once before go-live.",
+        "RESTORE.md explains, in plain language, both D1 Time Travel restore and restore from an export."
+      ]
+    },
+    {
+      "id": "F-14",
+      "title": "CSV export",
+      "milestone": "M3",
+      "priority": "could",
+      "status": "todo",
+      "depends_on": ["F-08"],
+      "acceptance_criteria": [
+        "The owner can export documents of a type and date range as CSV with number, date, customer, status and total in RM.",
+        "The file opens correctly in Excel with Malaysian dates and two-decimal amounts."
+      ]
+    }
+  ],
+
+  "milestones": [
+    { "id": "M0", "title": "Foundations", "features": ["F-00"], "exit_criteria": "Hello page live on staging behind Access; CI green" },
+    { "id": "M1", "title": "Master data", "features": ["F-01", "F-02", "F-03", "F-04"], "exit_criteria": "Two test companies with logos, customers and items on staging" },
+    { "id": "M2", "title": "Quotation, invoice, delivery order", "features": ["F-05", "F-06", "F-07", "F-08", "F-09", "F-10"], "exit_criteria": "Full flow quotation -> invoice -> two partial delivery orders works on staging with correct PDFs" },
+    { "id": "M3", "title": "Go-live readiness", "features": ["F-11", "F-12", "F-13", "F-14"], "exit_criteria": "Restore drill passed, privacy notice published, one month of real documents issued alongside the current method without differences" }
+  ],
+
+  "non_functional": {
+    "performance": "Pages usable within 2 seconds on a mid-range phone on 4G; API list calls under 1 second at 5,000 documents",
+    "responsive": "All screens usable on a 375 px wide phone; document editors may scroll horizontally on phones",
+    "accessibility": "Labels on all inputs, keyboard navigation in forms, colour contrast AA",
+    "browser_support": "Latest Chrome, Edge, Safari and Firefox",
+    "security": [
+      "Validate the Access JWT signature, audience and expiry on every /api request",
+      "Disable the workers.dev route for production and staging",
+      "R2 buckets are private; files are served only through the Worker after a membership check",
+      "Validate every request body with Zod; reject unknown fields",
+      "Escape all user text in PDF templates"
+    ]
+  },
+
+  "out_of_scope": [
+    "Payment tracking and receipts",
+    "Expenses and profit-and-loss reports",
+    "Sending email from the app",
+    "Upload of customer-signed delivery orders",
+    "SST tax invoices",
+    "MyInvois e-invoicing",
+    "Foreign currency",
+    "Customer portal or customer logins",
+    "Inventory and stock levels",
+    "Bahasa Malaysia UI"
+  ],
+
+  "future_ready": {
+    "sst": "companies.sst_registered, companies.sst_no, documents.tax_sen and document_lines.tax_rate_bp already exist; switching on SST becomes a settings change plus a TAX INVOICE template",
+    "myinvois": "companies.tin, companies.msic_code, customers.tin and items.classification_code already exist; an einvoice_submissions table and a submission workflow are added later",
+    "payments": "Add a payments table linked to invoices; documents.total_sen is the amount due",
+    "email": "Add Cloudflare Email Sending (Workers Paid) once a sending domain and mailbox are chosen"
+  },
+
+  "decision_log": [
+    { "date": "2026-11-23", "decision": "Host on Cloudflare Workers", "why": "Near-zero cost, no servers to manage, owner's preference" },
+    { "date": "2026-11-24", "decision": "Use Cloudflare D1 instead of Neon Postgres", "why": "Companies are not SST-registered and below the MyInvois threshold, PDPA impact is light, and one vendor is simpler for an AI-assisted build. Drizzle keeps a move to Postgres possible" },
+    { "date": "2026-11-24", "decision": "v1 scope is quotations, invoices and delivery orders", "why": "These are the documents used every day; payments, expenses, email and MyInvois come later" },
+    { "date": "2026-11-24", "decision": "Delivery orders are created from issued invoices, with partial deliveries", "why": "Matches the business's invoice-first workflow" },
+    { "date": "2026-11-24", "decision": "No SST and no foreign currency in v1", "why": "No company is SST-registered and all invoicing is in MYR" }
+  ]
+}

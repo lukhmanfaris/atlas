@@ -1,0 +1,63 @@
+{
+  "name": "atlas",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Internal quotations, invoices and delivery orders app for a small Malaysian business group",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:staging": "CLOUDFLARE_ENV=staging vite build",
+    "build:prod": "CLOUDFLARE_ENV=production vite build",
+    "preview": "npm run build && vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.worker.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:local": "wrangler d1 migrations apply DB --local",
+    "db:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
+    "db:migrate:prod": "wrangler d1 migrations apply DB --remote --env production",
+    "seed": "tsx scripts/seed.ts",
+    "deploy:staging": "npm run build:staging && wrangler deploy",
+    "deploy:prod": "npm run build:prod && wrangler deploy",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.108.4",
+    "clsx": "^2.1.1",
+    "drizzle-orm": "0.45.4",
+    "hono": "4.13.21",
+    "jose": "6.2.18",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "react-router": "8.5.2",
+    "tailwind-merge": "^3.7.1",
+    "uuidv7": "1.2.1",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "1.70.1",
+    "@cloudflare/vitest-plugin": "1.9.1",
+    "@playwright/test": "^1.65.1",
+    "@tailwindcss/vite": "4.3.5",
+    "@types/node": "^24.10.1",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "6.3.0",
+    "drizzle-kit": "0.31.11",
+    "eslint": "^10.15.0",
+    "tailwindcss": "4.3.5",
+    "tsx": "^4.23.15",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.74.0",
+    "vite": "8.3.8",
+    "vitest": "5.1.1",
+    "wrangler": "4.167.0"
+  }
+}
