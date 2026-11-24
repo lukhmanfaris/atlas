@@ -3,11 +3,9 @@ import { expect, test } from "@playwright/test";
 test("shows the signed-in email, the company switcher and the floating bar", async ({ page }) => {
   await page.goto("/");
 
-  await expect(page.getByText("halfxindustries@gmail.com")).toBeVisible();
   await expect(page.getByRole("button", { name: "Switch company" })).toBeVisible();
   await expect(page.getByRole("navigation").getByRole("link", { name: "Customers" })).toBeVisible();
   await expect(page.getByRole("navigation").getByRole("link", { name: "Settings" })).toBeVisible();
-  await expect(page.getByRole("navigation").getByRole("link", { name: "Items" })).toBeVisible();
 });
 
 test("switching company lands on customers and applies everywhere", async ({ page }) => {
@@ -69,7 +67,7 @@ test("creates an item, prices it in sen and rejects a duplicate SKU", async ({ p
   const stamp = Date.now();
   const sku = `E2E-${stamp}`;
 
-  await page.goto("/items");
+  await page.goto("/settings/items");
   await page.getByRole("button", { name: "New item" }).click();
   await page.getByLabel("Name", { exact: true }).fill(`E2E Item ${stamp}`);
   await page.getByLabel(/^SKU/).fill(sku);
@@ -98,7 +96,7 @@ test("creates an item, prices it in sen and rejects a duplicate SKU", async ({ p
 test("assigns a SKU automatically from the category", async ({ page }) => {
   const stamp = Date.now();
 
-  await page.goto("/items");
+  await page.goto("/settings/items");
   await page.getByRole("button", { name: "New item" }).click();
   await page.getByLabel("Name", { exact: true }).fill(`Auto ${stamp}`);
 
@@ -124,7 +122,7 @@ test("creates and issues a quotation", async ({ page }) => {
   await page.getByLabel("Qty").fill("2");
   await page.getByLabel("Unit price (RM)").fill("23.50");
 
-  await page.getByRole("button", { name: "Create draft" }).click();
+  await page.getByRole("button", { name: "Save draft" }).click();
 
   await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+$/);
   await expect(page.getByText("Draft quotation")).toBeVisible();

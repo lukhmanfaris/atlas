@@ -211,18 +211,6 @@ export function issueQuotation(companyId: string, documentId: string) {
   );
 }
 
-export function decideQuotation(
-  companyId: string,
-  documentId: string,
-  decision: "accept" | "reject",
-) {
-  return request<{ document: DocumentDto }>(
-    `/documents/${documentId}/${decision}`,
-    { method: "POST" },
-    companyId,
-  );
-}
-
 export function voidQuotation(companyId: string, documentId: string, reason: string) {
   return request<{ document: DocumentDto }>(
     `/documents/${documentId}/void`,

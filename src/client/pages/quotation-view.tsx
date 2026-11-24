@@ -19,7 +19,6 @@ import { formatRinggit } from "@/shared/items";
 import { milliToQty } from "@/shared/quantities";
 
 import {
-  decideQuotation,
   deleteQuotation,
   documentPdfUrl,
   documentPreviewUrl,
@@ -59,13 +58,6 @@ export function QuotationViewPage() {
 
   const issue = useMutation({
     mutationFn: () => issueQuotation(company.id, documentId ?? ""),
-    onSuccess: () => refresh(),
-    onError: (mutationError: Error) => setError(mutationError.message),
-  });
-
-  const decide = useMutation({
-    mutationFn: (decision: "accept" | "reject") =>
-      decideQuotation(company.id, documentId ?? "", decision),
     onSuccess: () => refresh(),
     onError: (mutationError: Error) => setError(mutationError.message),
   });
@@ -177,25 +169,6 @@ export function QuotationViewPage() {
                   <Download className="size-4" />
                   PDF
                 </Button>
-                {document.status === "issued" ? (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => decide.mutate("accept")}
-                      disabled={decide.isPending}
-                    >
-                      Accept
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => decide.mutate("reject")}
-                      disabled={decide.isPending}
-                    >
-                      Reject
-                    </Button>
-                  </>
-                ) : null}
                 {canVoid && isOwner ? (
                   <Button variant="ghost" size="sm" onClick={() => setVoidOpen(true)}>
                     Void
@@ -214,7 +187,6 @@ export function QuotationViewPage() {
           ) : null}
 
           <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label="Reference" value={document.reference} />
             <Row label="Valid until" value={document.validUntil} />
           </div>
 

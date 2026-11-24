@@ -20,7 +20,6 @@ export function renderQuotation(model: PdfModel) {
         { label: "Quotation No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Valid Until", value: formatDate(model.validUntil) },
-        { label: "Reference", value: model.reference },
       ])}
       ${customerBlock(model)}
       <table class="lines">

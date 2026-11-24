@@ -32,7 +32,6 @@ type DocumentRow = {
   valid_until: string | null;
   delivery_date: string | null;
   delivery_address: string | null;
-  reference: string | null;
   notes: string | null;
   terms: string | null;
   subtotal_sen: number;
@@ -234,7 +233,6 @@ export async function loadDocument(
     dueDate: row.due_date,
     validUntil: row.valid_until,
     deliveryDate: row.delivery_date,
-    reference: row.reference,
     terms: row.terms,
     notes: row.notes,
     deliveryAddress: row.delivery_address,

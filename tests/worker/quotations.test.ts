@@ -201,7 +201,7 @@ describe("issuing", () => {
       as: email,
       companyId,
       method: "PATCH",
-      body: { reference: "CHANGED" },
+      body: { notes: "CHANGED" },
     });
 
     expect(response.status).toBe(409);
@@ -223,33 +223,6 @@ describe("issuing", () => {
 });
 
 describe("quotation states", () => {
-  it("accepts and rejects an issued quotation", async () => {
-    const { email, companyId, customerId } = await setup();
-    const first = await createQuotation(email, companyId, customerId);
-    await call(`/api/documents/${first.id}/issue`, { as: email, companyId, method: "POST" });
-
-    const accepted = await call(`/api/documents/${first.id}/accept`, {
-      as: email,
-      companyId,
-      method: "POST",
-    });
-    expect(accepted.status).toBe(200);
-    expect(((await accepted.json()) as { document: { status: string } }).document.status).toBe(
-      "accepted",
-    );
-
-    const second = await createQuotation(email, companyId, customerId);
-    await call(`/api/documents/${second.id}/issue`, { as: email, companyId, method: "POST" });
-    const rejected = await call(`/api/documents/${second.id}/reject`, {
-      as: email,
-      companyId,
-      method: "POST",
-    });
-    expect(((await rejected.json()) as { document: { status: string } }).document.status).toBe(
-      "rejected",
-    );
-  });
-
   it("only an owner can void, and a reason is required", async () => {
     const staff = await setup("staff");
     const { id } = await createQuotation(staff.email, staff.companyId, staff.customerId);

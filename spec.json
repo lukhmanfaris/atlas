@@ -264,7 +264,6 @@
         { "name": "valid_until", "type": "text", "notes": "Quotation only: issue_date + validity days" },
         { "name": "delivery_date", "type": "text", "notes": "Delivery order only" },
         { "name": "delivery_address", "type": "text", "notes": "Delivery order required; invoice optional" },
-        { "name": "reference", "type": "text", "notes": "Customer PO number or other reference" },
         { "name": "source_document_id", "type": "text", "references": "documents.id", "notes": "Invoice from quotation; delivery order from invoice" },
         { "name": "notes", "type": "text" },
         { "name": "terms", "type": "text" },
@@ -360,13 +359,11 @@
       "transitions": [
         { "from": "draft", "to": "issued", "action": "issue", "who": "staff" },
         { "from": "draft", "to": "deleted", "action": "delete", "who": "staff", "notes": "Hard delete allowed only for drafts" },
-        { "from": "issued", "to": "accepted", "action": "accept", "who": "staff" },
-        { "from": "issued", "to": "rejected", "action": "reject", "who": "staff" },
         { "from": "issued", "to": "void", "action": "void", "who": "owner", "requires": "reason" },
         { "from": "accepted", "to": "accepted", "action": "convert_to_invoice", "who": "staff", "notes": "Creates a draft invoice; allowed once unless that invoice is void" }
       ],
       "derived": "Show 'Expired' in lists when status is issued and valid_until is before today. Expired is a label, not a stored state.",
-      "convert_rule": "Converting an issued quotation first marks it accepted, then creates the draft invoice."
+      "convert_rule": "Converting an issued quotation first marks it accepted, then creates the draft invoice. There is no manual accept or reject step."
     },
     "invoice": {
       "states": ["draft", "issued", "void"],
@@ -407,7 +404,7 @@
     },
     "quotation": {
       "title": "QUOTATION",
-      "meta": ["Quotation No.", "Date", "Valid Until", "Reference"],
+      "meta": ["Quotation No.", "Date", "Valid Until"],
       "columns": ["No.", "Description", "Qty", "Unit", "Unit Price (RM)", "Discount (RM)", "Amount (RM)"],
       "totals": ["Subtotal", "Discount", "Total (RM)"],
       "below_totals": ["Amount in words", "Terms and conditions", "Optional 'Accepted by' block: name, signature and company stamp, date"]
@@ -415,14 +412,14 @@
     "invoice": {
       "title": "INVOICE",
       "title_rule": "Never 'TAX INVOICE' while the company is not SST-registered",
-      "meta": ["Invoice No.", "Date", "Terms (e.g. 30 days)", "Due Date", "Reference", "Quotation No. (if converted)"],
+      "meta": ["Invoice No.", "Date", "Terms (e.g. 30 days)", "Due Date", "Quotation No. (if converted)"],
       "columns": ["No.", "Description", "Qty", "Unit", "Unit Price (RM)", "Discount (RM)", "Amount (RM)"],
       "totals": ["Subtotal", "Discount", "Total (RM)"],
       "below_totals": ["Amount in words", "Bank details for payment", "Notes"]
     },
     "delivery_order": {
       "title": "DELIVERY ORDER",
-      "meta": ["DO No.", "Date", "Delivery Date", "Invoice No.", "Reference", "Vehicle No. (optional)", "Driver (optional)"],
+      "meta": ["DO No.", "Date", "Delivery Date", "Invoice No.", "Vehicle No. (optional)", "Driver (optional)"],
       "address_blocks": ["Bill To", "Deliver To"],
       "columns": ["No.", "Item Code", "Description", "Qty", "Unit"],
       "price_rule": "No prices, discounts or totals anywhere on a delivery order",
@@ -594,7 +591,7 @@
         "valid_until defaults to issue_date plus the company's quotation_validity_days.",
         "Totals follow calculations exactly; tests cover rounding with decimal quantities and line discounts.",
         "Issuing freezes the customer and company snapshots, assigns a number, stores the PDF in R2 and records its SHA-256.",
-        "Issued quotations cannot be edited (409); they can be accepted, rejected or voided by the owner with a reason.",
+        "Issued quotations cannot be edited (409); the owner can void one with a reason. Acceptance is implied by converting it to an invoice (F-09).",
         "Lists show an Expired label when issued and past valid_until."
       ]
     },
@@ -745,6 +742,9 @@
     { "date": "2026-11-24", "decision": "Delivery orders are created from issued invoices, with partial deliveries", "why": "Matches the business's invoice-first workflow" },
     { "date": "2026-11-24", "decision": "No SST and no foreign currency in v1", "why": "No company is SST-registered and all invoicing is in MYR" },
     { "date": "2026-11-24", "decision": "Use Worker-level Cloudflare Access on the workers.dev address instead of a custom domain", "why": "Workers-level Access protects the workers.dev hostname, routes and previews, so v1 needs no domain. The owner keeps the .my domain for a later move without changing the app" },
-    { "date": "2026-11-24", "decision": "Document numbers are PREFIX-1042: no year, sequence starts at 1000 and never resets", "why": "The owner does not issue much volume and did not want numbers that advertise that. A high starting offset achieves it while staying consecutive and gap-free for accounting; random numbers were rejected because they would break gap-free numbering, ordering and explainability" }
+    { "date": "2026-11-24", "decision": "Document numbers are PREFIX-1042: no year, sequence starts at 1000 and never resets", "why": "The owner does not issue much volume and did not want numbers that advertise that. A high starting offset achieves it while staying consecutive and gap-free for accounting; random numbers were rejected because they would break gap-free numbering, ordering and explainability" },
+    { "date": "2026-11-24", "decision": "Documents have no reference field", "why": "The owner does not use customer PO numbers; the field was removed from the data model, the API, the PDFs and the editor" },
+    { "date": "2026-11-24", "decision": "Quotations have no manual accept or reject step", "why": "Nothing gates on acceptance, and converting to an invoice already implies it. Statuses are draft, issued, void, with accepted set only by conversion" },
+    { "date": "2026-11-24", "decision": "Items live under Settings, not in the bottom bar", "why": "The catalogue is set up rarely; the bar stays short: Home, Quotes, Settings, with Invoices added in F-08" }
   ]
 }

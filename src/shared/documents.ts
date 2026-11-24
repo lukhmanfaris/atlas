@@ -20,7 +20,6 @@ export const createQuotationSchema = z.strictObject({
   customerId: z.string().trim().min(1),
   issueDate: dateString,
   validUntil: dateString.optional(),
-  reference: nullableText(100),
   notes: nullableText(2000),
   terms: nullableText(4000),
   discountSen: z.number().int().min(0).max(100_000_000).optional(),
@@ -34,8 +33,7 @@ export const updateQuotationSchema = z
     customerId: z.string().trim().min(1).optional(),
     issueDate: dateString.optional(),
     validUntil: dateString.nullable().optional(),
-    reference: nullableText(100),
-    notes: nullableText(2000),
+      notes: nullableText(2000),
     terms: nullableText(4000),
     discountSen: z.number().int().min(0).max(100_000_000).optional(),
     lines: z.array(documentLineSchema).min(1).max(300).optional(),
@@ -72,7 +70,6 @@ export type DocumentDto = {
   issueDate: string;
   validUntil: string | null;
   dueDate: string | null;
-  reference: string | null;
   notes: string | null;
   terms: string | null;
   subtotalSen: number;

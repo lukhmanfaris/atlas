@@ -5,6 +5,7 @@ import type { CompanyDto, UpdateCompanyInput } from "@/shared/companies";
 
 import { getCompany, logoUrl, updateCompany, uploadLogo } from "../api";
 import { Field, inputClass } from "../components/field";
+import { SettingsTabs } from "../components/settings-tabs";
 import { useCompany } from "../company";
 
 type Editable = Omit<UpdateCompanyInput, "sstRegistered">;
@@ -123,14 +124,16 @@ export function SettingsPage() {
 
   return (
     <form className="space-y-8" onSubmit={submit}>
+      <SettingsTabs />
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Company settings</h1>
           <p className="mt-1 text-slate-600">
             {canEdit
               ? "These details appear on every document this company issues."
-              : `Only an owner can change these. You are signed in as ${user.email}.`}
+              : "Only an owner can change these."}
           </p>
+          <p className="text-xs text-muted-foreground">Signed in as {user.email}</p>
         </div>
         {canEdit ? (
           <button

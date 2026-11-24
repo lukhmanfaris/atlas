@@ -159,7 +159,6 @@ export const documents = sqliteTable(
     validUntil: text("valid_until"),
     deliveryDate: text("delivery_date"),
     deliveryAddress: text("delivery_address"),
-    reference: text("reference"),
     sourceDocumentId: text("source_document_id").references((): AnySQLiteColumn => documents.id),
     notes: text("notes"),
     terms: text("terms"),

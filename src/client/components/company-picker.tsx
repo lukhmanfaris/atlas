@@ -50,11 +50,11 @@ export function CompanyPicker() {
         variant="outline"
         aria-label="Switch company"
         onClick={() => setOpen(true)}
-        className="h-auto gap-2 rounded-xl px-2 py-1.5"
+        className="h-auto max-w-64 gap-2 rounded-full px-2 py-1"
       >
-        <CompanyAvatar company={company} />
-        <span className="max-w-44 truncate text-sm font-medium">{company.name}</span>
-        <ChevronsUpDown className="size-4 text-muted-foreground" />
+        <CompanyAvatar company={company} className="size-6 rounded-md text-[10px]" />
+        <span className="truncate text-sm font-medium">{company.name}</span>
+        <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" />
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>

@@ -16,7 +16,9 @@ import {
 } from "@/client/components/ui/select";
 import {
   createQuotation,
+  deleteQuotation,
   getQuotation,
+  issueQuotation,
   listCustomers,
   listItems,
   updateQuotation,
@@ -78,7 +80,6 @@ export function QuotationEditorPage() {
   const [customerId, setCustomerId] = useState("");
   const [issueDate, setIssueDate] = useState(todayInMalaysia());
   const [validUntil, setValidUntil] = useState("");
-  const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
   const [terms, setTerms] = useState("");
   const [discount, setDiscount] = useState("0.00");
@@ -91,7 +92,6 @@ export function QuotationEditorPage() {
     setCustomerId(document.customerId);
     setIssueDate(document.issueDate);
     setValidUntil(document.validUntil ?? "");
-    setReference(document.reference ?? "");
     setNotes(document.notes ?? "");
     setTerms(document.terms ?? "");
     setDiscount(senToRinggit(document.discountSen));
@@ -119,7 +119,7 @@ export function QuotationEditorPage() {
   }, [lines, discount]);
 
   const save = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (mode: "draft" | "issue") => {
       const payloadLines = lines.map((line) => {
         const quantityMilli = qtyToMilli(line.quantity);
         const unitPriceSen = ringgitToSen(line.price);
@@ -144,21 +144,30 @@ export function QuotationEditorPage() {
         customerId,
         issueDate,
         validUntil: validUntil || undefined,
-        reference: reference || null,
         notes: notes || null,
         terms: terms || null,
         discountSen: ringgitToSen(discount) ?? 0,
         lines: payloadLines,
       };
 
-      if (editing && documentId) {
-        return updateQuotation(company.id, documentId, input);
+      const saved = editing && documentId
+        ? await updateQuotation(company.id, documentId, input)
+        : await createQuotation(company.id, { type: "quotation", ...input });
+
+      if (mode === "issue") {
+        return issueQuotation(company.id, saved.document.id);
       }
-      return createQuotation(company.id, { type: "quotation", ...input });
+      return saved;
     },
     onSuccess: (result) => {
       navigate(`/quotations/${result.document.id}`);
     },
+    onError: (mutationError: Error) => setError(mutationError.message),
+  });
+
+  const removeDraft = useMutation({
+    mutationFn: () => deleteQuotation(company.id, documentId ?? ""),
+    onSuccess: () => navigate("/quotations"),
     onError: (mutationError: Error) => setError(mutationError.message),
   });
 
@@ -221,9 +230,6 @@ export function QuotationEditorPage() {
                 ))}
               </SelectContent>
             </Select>
-          </Field>
-          <Field label="Reference">
-            <Input value={reference} onChange={(event) => setReference(event.target.value)} />
           </Field>
           <Field label="Issue date">
             <Input
@@ -378,12 +384,34 @@ export function QuotationEditorPage() {
 
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
 
-      <div className="flex justify-end gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button variant="outline" onClick={() => navigate(-1)}>
           Cancel
         </Button>
-        <Button onClick={() => save.mutate()} disabled={save.isPending || !customerId}>
-          {save.isPending ? "Saving…" : editing ? "Save changes" : "Create draft"}
+        {editing ? (
+          <Button
+            variant="ghost"
+            onClick={() => {
+              if (window.confirm("Delete this draft? No number has been used.")) {
+                removeDraft.mutate();
+              }
+            }}
+          >
+            Delete draft
+          </Button>
+        ) : null}
+        <Button
+          variant="outline"
+          onClick={() => save.mutate("draft")}
+          disabled={save.isPending || !customerId}
+        >
+          Save draft
+        </Button>
+        <Button
+          onClick={() => save.mutate("issue")}
+          disabled={save.isPending || !customerId}
+        >
+          Issue
         </Button>
       </div>
     </div>

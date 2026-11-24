@@ -31,6 +31,7 @@ import {
 
 import { ApiError, createItem, listItems, updateItem } from "../api";
 import { ItemForm } from "../components/item-form";
+import { SettingsTabs } from "../components/settings-tabs";
 import { useCompany } from "../company";
 
 function fieldErrorsFrom(error: unknown): Record<string, string> | undefined {
@@ -91,6 +92,7 @@ export function ItemsPage() {
 
   return (
     <div className="space-y-6">
+      <SettingsTabs />
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Items</h1>

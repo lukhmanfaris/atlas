@@ -43,7 +43,6 @@ export type PdfModel = {
   dueDate?: string | null;
   validUntil?: string | null;
   deliveryDate?: string | null;
-  reference?: string | null;
   terms?: string | null;
   notes?: string | null;
   deliveryAddress?: string | null;

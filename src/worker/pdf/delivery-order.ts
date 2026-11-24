@@ -15,7 +15,6 @@ export function renderDeliveryOrder(model: PdfModel) {
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Delivery Date", value: formatDate(model.deliveryDate) },
         { label: "Invoice No.", value: model.sourceNumber },
-        { label: "Reference", value: model.reference },
         { label: "Vehicle No.", value: model.vehicleNo },
         { label: "Driver", value: model.driverName },
       ])}

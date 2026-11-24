@@ -41,7 +41,6 @@ function model(overrides: Partial<PdfModel> = {}): PdfModel {
     dueDate: "2026-12-24",
     validUntil: null,
     deliveryDate: null,
-    reference: "PO-77",
     terms: null,
     notes: null,
     deliveryAddress: null,

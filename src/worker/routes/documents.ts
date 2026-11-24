@@ -114,7 +114,6 @@ documentRoutes.post("/", requireCompany, async (c) => {
     customerId: parsed.data.customerId,
     issueDate: parsed.data.issueDate,
     validUntil,
-    reference: parsed.data.reference ?? null,
     notes: parsed.data.notes ?? null,
     terms: parsed.data.terms ?? null,
     discountSen: parsed.data.discountSen ?? 0,
@@ -182,7 +181,6 @@ documentRoutes.patch("/:documentId", requireCompany, async (c) => {
     ...(parsed.data.customerId ? { customerId: parsed.data.customerId } : {}),
     ...(parsed.data.issueDate ? { issueDate: parsed.data.issueDate } : {}),
     ...(parsed.data.validUntil !== undefined ? { validUntil: parsed.data.validUntil } : {}),
-    ...(parsed.data.reference !== undefined ? { reference: parsed.data.reference } : {}),
     ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
     ...(parsed.data.terms !== undefined ? { terms: parsed.data.terms } : {}),
     discountSen,
@@ -295,49 +293,6 @@ documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {
   const body = await detail(c, documentId);
   return c.json({ document: body });
 });
-
-documentRoutes.post("/:documentId/accept", requireCompany, async (c) => {
-  return decide(c, "accepted");
-});
-
-documentRoutes.post("/:documentId/reject", requireCompany, async (c) => {
-  return decide(c, "rejected");
-});
-
-async function decide(c: Context<AppEnv>, status: "accepted" | "rejected") {
-  const db = createDb(c.env.DB);
-  const companyId = c.get("company").id;
-  const documentId = c.req.param("documentId") ?? "";
-
-  const document = await findDocument(db, companyId, documentId);
-  if (!document) {
-    return apiError(c, 404, "not_found", "Document not found.");
-  }
-  if (document.status !== "issued") {
-    return apiError(c, 409, "invalid_state", `Only an issued quotation can be ${status}.`);
-  }
-
-  const at = Date.now();
-  await db.batch([
-    db
-      .update(documents)
-      .set({ status, updatedAt: at })
-      .where(and(eq(documents.companyId, companyId), eq(documents.id, documentId))),
-    db.insert(auditLog).values({
-      id: uuidv7(),
-      companyId,
-      userId: c.get("user").id,
-      action: status === "accepted" ? "document.accept" : "document.reject",
-      entity: "document",
-      entityId: documentId,
-      detail: null,
-      at,
-    }),
-  ]);
-
-  const body = await detail(c, documentId);
-  return c.json({ document: body });
-}
 
 documentRoutes.post("/:documentId/void", requireCompany, requireOwner, async (c) => {
   const parsed = voidDocumentSchema.safeParse(await readJson(c));

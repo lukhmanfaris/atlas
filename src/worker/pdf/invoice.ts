@@ -24,7 +24,6 @@ export function renderInvoice(model: PdfModel) {
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Terms", value: terms },
         { label: "Due Date", value: formatDate(model.dueDate) },
-        { label: "Reference", value: model.reference },
         { label: "Quotation No.", value: model.sourceNumber },
       ])}
       ${customerBlock(model)}

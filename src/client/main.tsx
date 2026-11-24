@@ -29,7 +29,7 @@ const router = createBrowserRouter([
       { index: true, element: <HomePage /> },
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:customerId", element: <CustomerDetailPage /> },
-      { path: "items", element: <ItemsPage /> },
+      { path: "settings/items", element: <ItemsPage /> },
       { path: "quotations", element: <QuotationsPage /> },
       { path: "quotations/new", element: <QuotationEditorPage /> },
       { path: "quotations/:documentId", element: <QuotationViewPage /> },
