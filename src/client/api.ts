@@ -100,6 +100,10 @@ export function listCustomers(
   );
 }
 
+export function getCustomer(companyId: string, customerId: string) {
+  return request<{ customer: CustomerDto }>(`/customers/${customerId}`, {}, companyId);
+}
+
 export function createCustomer(companyId: string, input: CreateCustomerInput) {
   return request<{ customer: CustomerDto }>(
     "/customers",

@@ -10,13 +10,14 @@ export function Field({
   hint?: string;
 }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-slate-700">{label}</span>
+    <label className="grid gap-1.5">
+      <span className="text-sm font-medium leading-none">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-slate-500">{hint}</span> : null}
+      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </label>
   );
 }
 
+/** Matches the shadcn Input styling so the settings form stays consistent. */
 export const inputClass =
-  "w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500";
+  "h-8 w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 py-1 text-base outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50 md:text-sm";
