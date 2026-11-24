@@ -15,6 +15,14 @@ import {
 } from "@/client/components/ui/dialog";
 import { Input } from "@/client/components/ui/input";
 import { Label } from "@/client/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/client/components/ui/table";
 import type { CreateCustomerInput } from "@/shared/customers";
 
 import { createCustomer, listCustomers, updateCustomer } from "../api";
@@ -103,40 +111,72 @@ export function CustomersPage() {
               {q ? "No customers match that name." : "No customers yet."}
             </p>
           ) : (
-            <ul className="divide-y">
-              {rows.map((customer) => (
-                <li
-                  key={customer.id}
-                  className="flex flex-wrap items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/40"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="flex items-center gap-2 font-medium">
-                      <Link
-                        to={`/customers/${customer.id}`}
-                        className="truncate underline-offset-4 hover:underline"
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Customer</TableHead>
+                  <TableHead className="hidden md:table-cell">Contact</TableHead>
+                  <TableHead className="hidden sm:table-cell">Terms</TableHead>
+                  <TableHead className="hidden lg:table-cell">Documents</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {rows.map((customer) => (
+                  <TableRow key={customer.id}>
+                    <TableCell className="max-w-64 whitespace-normal">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Link
+                          to={`/customers/${customer.id}`}
+                          className="font-medium underline-offset-4 hover:underline"
+                        >
+                          {customer.name}
+                        </Link>
+                        {customer.isArchived ? <Badge variant="secondary">archived</Badge> : null}
+                      </span>
+                      <span className="block text-xs text-muted-foreground">
+                        {customer.registrationNo ?? "No registration number"}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="hidden max-w-56 whitespace-normal md:table-cell">
+                      <span className="block">{customer.contactPerson ?? "—"}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {[customer.phone, customer.email].filter(Boolean).join(" · ") || "No contact details"}
+                      </span>
+                    </TableCell>
+
+                    <TableCell className="hidden sm:table-cell">
+                      {customer.paymentTermsDays === null ? (
+                        <span className="text-muted-foreground">Company default</span>
+                      ) : (
+                        `${customer.paymentTermsDays} days`
+                      )}
+                    </TableCell>
+
+                    <TableCell className="hidden lg:table-cell">
+                      {/* Filled in from M2, when documents and lines exist. */}
+                      <span className="text-muted-foreground">No documents yet</span>
+                    </TableCell>
+
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          setArchived.mutate({
+                            id: customer.id,
+                            archived: !customer.isArchived,
+                          })
+                        }
                       >
-                        {customer.name}
-                      </Link>
-                      {customer.isArchived ? <Badge variant="secondary">archived</Badge> : null}
-                    </p>
-                    <p className="truncate text-sm text-muted-foreground">
-                      {[customer.contactPerson, customer.phone, customer.email]
-                        .filter(Boolean)
-                        .join(" · ") || "No contact details"}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() =>
-                      setArchived.mutate({ id: customer.id, archived: !customer.isArchived })
-                    }
-                  >
-                    {customer.isArchived ? "Restore" : "Archive"}
-                  </Button>
-                </li>
-              ))}
-            </ul>
+                        {customer.isArchived ? "Restore" : "Archive"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

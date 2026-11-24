@@ -42,7 +42,7 @@ test("creates, opens, edits and archives a customer", async ({ page }) => {
   await page.getByLabel("Billing address", { exact: true }).fill("1 Test Road\n50000 Kuala Lumpur");
   await page.getByRole("button", { name: "Save customer" }).click();
 
-  const row = page.getByRole("listitem").filter({ hasText: name });
+  const row = page.getByRole("row").filter({ hasText: name });
   await expect(row).toBeVisible();
 
   await row.getByRole("link", { name }).click();
@@ -58,8 +58,8 @@ test("creates, opens, edits and archives a customer", async ({ page }) => {
   await expect(page.getByText("archived")).toBeVisible();
 
   await page.goto("/customers");
-  await expect(page.getByRole("listitem").filter({ hasText: name })).toHaveCount(0);
+  await expect(page.getByRole("row").filter({ hasText: name })).toHaveCount(0);
 
   await page.getByLabel("Show archived").check();
-  await expect(page.getByRole("listitem").filter({ hasText: name })).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: name })).toBeVisible();
 });
