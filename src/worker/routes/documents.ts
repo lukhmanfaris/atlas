@@ -5,6 +5,7 @@ import type { ZodError } from "zod";
 
 import {
   createInvoiceSchema,
+  markDeliveredSchema,
   createQuotationSchema,
   type DocumentCustomerInput,
   updateQuotationSchema,
@@ -28,6 +29,7 @@ import {
 import { auditLog, customers, documents } from "@/worker/db/schema";
 import { apiError } from "@/worker/errors";
 import { amountInWords } from "@/worker/services/amount-in-words";
+import { findOverDelivery, remainingForInvoice } from "@/worker/services/delivery";
 import { addDays, todayInMalaysia } from "@/worker/services/dates";
 import { companySnapshot, customerSnapshot } from "@/worker/services/documents";
 import { issueDocumentNumber } from "@/worker/services/numbering";
@@ -89,6 +91,36 @@ async function detail(c: Context<AppEnv>, documentId: string) {
             )
         )
       : [];
+
+  if (document.type === "delivery_order") {
+    return {
+      id: document.id,
+      type: document.type,
+      status: document.status,
+      number: document.number,
+      customerId: document.customerId,
+      issueDate: document.issueDate,
+      deliveryDate: document.deliveryDate,
+      deliveryAddress: document.deliveryAddress,
+      vehicleNo: document.vehicleNo,
+      driverName: document.driverName,
+      receivedBy: document.receivedBy,
+      deliveredAt: document.deliveredAt,
+      notes: document.notes,
+      sourceDocumentId: document.sourceDocumentId,
+      sourceNumber,
+      expired: false,
+      lines: lines.map((line) => ({
+        id: line.id,
+        lineNo: line.lineNo,
+        sku: line.sku,
+        description: line.description,
+        unit: line.unit,
+        quantityMilli: line.quantityMilli,
+        sourceLineId: line.sourceLineId,
+      })),
+    };
+  }
 
   return { ...withExpired(document), lines, sourceNumber, linkedInvoices };
 }
@@ -285,6 +317,30 @@ documentRoutes.patch("/:documentId", requireCompany, async (c) => {
     resolvedCustomerId = resolved.id;
   }
 
+  if (document.type === "delivery_order" && parsed.data.lines) {
+    if (parsed.data.lines.some((line) => !line.sourceLineId)) {
+      return apiError(
+        c,
+        400,
+        "validation_error",
+        "Every delivery order line must point at a line on the invoice.",
+        [{ path: "lines", message: "Missing source line." }],
+      );
+    }
+
+    const remaining = await remainingForInvoice(c.env.DB, document.sourceDocumentId ?? "", documentId);
+    const over = findOverDelivery(parsed.data.lines, remaining);
+    if (over) {
+      return apiError(
+        c,
+        400,
+        "validation_error",
+        `Only ${over.remainingMilli / 1000} ${over.unit} of "${over.description}" is left to deliver.`,
+        [{ path: "lines", message: "Quantity exceeds the remaining amount." }],
+      );
+    }
+  }
+
   const effectiveLines = parsed.data.lines ?? (await findLines(db, documentId));
   const discountSen = parsed.data.discountSen ?? document.discountSen;
   const totals = computeTotals(toTotalsLines(effectiveLines), discountSen, 0);
@@ -324,6 +380,125 @@ documentRoutes.delete("/:documentId", requireCompany, async (c) => {
   return c.body(null, 204);
 });
 
+
+
+documentRoutes.get("/:documentId/delivery-remaining", requireCompany, async (c) => {
+  const document = await findDocument(
+    createDb(c.env.DB),
+    c.get("company").id,
+    c.req.param("documentId") ?? "",
+  );
+
+  if (!document || document.type !== "invoice") {
+    return apiError(c, 404, "not_found", "Invoice not found.");
+  }
+
+  return c.json({ lines: await remainingForInvoice(c.env.DB, document.id) });
+});
+
+documentRoutes.post("/:documentId/delivery-orders", requireCompany, async (c) => {
+  const db = createDb(c.env.DB);
+  const companyId = c.get("company").id;
+  const invoiceId = c.req.param("documentId") ?? "";
+  const user = c.get("user");
+
+  const invoice = await findDocument(db, companyId, invoiceId);
+  if (!invoice) {
+    return apiError(c, 404, "not_found", "Invoice not found.");
+  }
+  if (invoice.type !== "invoice") {
+    return apiError(c, 409, "invalid_state", "Delivery orders are created from invoices.");
+  }
+  if (invoice.status !== "issued") {
+    return apiError(c, 409, "invalid_state", "Only an issued invoice can be delivered.");
+  }
+
+  const remaining = await remainingForInvoice(c.env.DB, invoiceId);
+  const deliverable = remaining.filter((line) => line.remainingMilli > 0);
+  if (deliverable.length === 0) {
+    return apiError(c, 409, "invalid_state", "Everything on this invoice has been delivered.");
+  }
+
+  const company = await findCompany(db, companyId);
+  const customer = await findCustomer(db, companyId, invoice.customerId);
+  const today = todayInMalaysia();
+
+  const created = await createDraft(db, {
+    companyId,
+    userId: user.id,
+    type: "delivery_order",
+    customerId: invoice.customerId,
+    issueDate: today,
+    validUntil: null,
+    dueDate: null,
+    deliveryDate: today,
+    deliveryAddress: customer?.deliveryAddress ?? customer?.billingAddress ?? null,
+    notes: company?.deliveryOrderNotes ?? null,
+    terms: null,
+    discountSen: 0,
+    sourceDocumentId: invoiceId,
+    lines: deliverable.map((line) => ({
+      sku: line.sku,
+      description: line.description,
+      unit: line.unit,
+      quantityMilli: line.remainingMilli,
+      unitPriceSen: 0,
+      discountSen: 0,
+      sourceLineId: line.lineId,
+    })),
+  });
+
+  const body = await detail(c, created.id);
+  return c.json({ document: body }, 201);
+});
+
+documentRoutes.post("/:documentId/mark-delivered", requireCompany, async (c) => {
+  const parsed = markDeliveredSchema.safeParse(await readJson(c));
+  if (!parsed.success) {
+    return apiError(c, 400, "validation_error", "Check the delivery details.");
+  }
+
+  const db = createDb(c.env.DB);
+  const companyId = c.get("company").id;
+  const documentId = c.req.param("documentId") ?? "";
+
+  const document = await findDocument(db, companyId, documentId);
+  if (!document) {
+    return apiError(c, 404, "not_found", "Document not found.");
+  }
+  if (document.type !== "delivery_order") {
+    return apiError(c, 409, "invalid_state", "Only a delivery order can be marked delivered.");
+  }
+  if (document.status !== "issued") {
+    return apiError(c, 409, "invalid_state", "Only an issued delivery order can be marked delivered.");
+  }
+
+  const at = parsed.data.deliveredAt ?? Date.now();
+  await db.batch([
+    db
+      .update(documents)
+      .set({
+        status: "delivered",
+        deliveredAt: at,
+        receivedBy: parsed.data.receivedBy ?? null,
+        updatedAt: Date.now(),
+      })
+      .where(and(eq(documents.companyId, companyId), eq(documents.id, documentId))),
+    db.insert(auditLog).values({
+      id: uuidv7(),
+      companyId,
+      userId: c.get("user").id,
+      action: "document.mark_delivered",
+      entity: "document",
+      entityId: documentId,
+      detail: null,
+      at: Date.now(),
+    }),
+  ]);
+
+  const body = await detail(c, documentId);
+  return c.json({ document: body });
+});
 
 documentRoutes.post("/:documentId/convert-to-invoice", requireCompany, async (c) => {
   const db = createDb(c.env.DB);
@@ -442,6 +617,23 @@ documentRoutes.post("/:documentId/issue", requireCompany, async (c) => {
     return apiError(c, 409, "invalid_state", "Add at least one line before issuing.");
   }
 
+  if (document.type === "delivery_order") {
+    const remaining = await remainingForInvoice(
+      c.env.DB,
+      document.sourceDocumentId ?? "",
+      documentId,
+    );
+    const over = findOverDelivery(lines, remaining);
+    if (over) {
+      return apiError(
+        c,
+        409,
+        "invalid_state",
+        `Only ${over.remainingMilli / 1000} ${over.unit} of "${over.description}" is left to deliver.`,
+      );
+    }
+  }
+
   const company = await findCompany(db, companyId);
   const customerRow = await findCustomer(db, companyId, document.customerId);
   const totals = computeTotals(toTotalsLines(lines), document.discountSen, 0);
@@ -537,7 +729,7 @@ documentRoutes.post("/:documentId/void", requireCompany, requireOwner, async (c)
   if (!document) {
     return apiError(c, 404, "not_found", "Document not found.");
   }
-  if (!["issued", "accepted", "rejected"].includes(document.status)) {
+  if (!["issued", "accepted", "rejected", "delivered"].includes(document.status)) {
     return apiError(c, 409, "invalid_state", "Only an issued document can be voided.");
   }
 

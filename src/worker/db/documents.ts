@@ -74,6 +74,8 @@ export type CreateDraftInput = {
   terms: string | null;
   discountSen: number;
   sourceDocumentId?: string | null;
+  deliveryDate?: string | null;
+  deliveryAddress?: string | null;
   lines: (DocumentLineInput & { sourceLineId?: string | null })[];
 };
 
@@ -99,6 +101,8 @@ export async function createDraft(
       terms: input.terms,
       discountSen: input.discountSen,
       sourceDocumentId: input.sourceDocumentId ?? null,
+      deliveryDate: input.deliveryDate ?? null,
+      deliveryAddress: input.deliveryAddress ?? null,
       taxSen: 0,
       subtotalSen: totals.subtotalSen,
       totalSen: totals.totalSen,

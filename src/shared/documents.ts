@@ -11,6 +11,8 @@ export const documentLineSchema = z.strictObject({
   quantityMilli: z.number().int().positive().max(1_000_000_000),
   unitPriceSen: z.number().int().min(0).max(100_000_000),
   discountSen: z.number().int().min(0).max(100_000_000).optional(),
+  /** Set on delivery order lines so they can be matched to the invoice line. */
+  sourceLineId: z.string().trim().min(1).nullish(),
 });
 
 export type DocumentLineInput = z.infer<typeof documentLineSchema>;
@@ -125,3 +127,21 @@ export type DocumentListRow = {
   customerName: string;
   expired: boolean;
 };
+
+export const markDeliveredSchema = z.strictObject({
+  deliveredAt: z.number().int().positive().optional(),
+  receivedBy: z.string().trim().max(120).nullish(),
+});
+
+export type MarkDeliveredInput = z.infer<typeof markDeliveredSchema>;
+
+/** Delivery orders never expose money in any response. */
+export const deliveryOrderLineSchema = z.strictObject({
+  id: z.string(),
+  lineNo: z.number(),
+  sku: z.string().nullable(),
+  description: z.string(),
+  unit: z.string(),
+  quantityMilli: z.number(),
+  sourceLineId: z.string().nullable(),
+});
