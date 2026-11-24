@@ -17,7 +17,7 @@
   // `npm run dev` uses this. Deploys always pass CLOUDFLARE_ENV.
   "vars": {
     "ENVIRONMENT": "development",
-    "PDF_RENDERING": "on",
+    "PDF_RENDERING": "off",
     "ACCESS_TEAM_DOMAIN": "",
     "ACCESS_AUD": "",
     "DEV_AUTH_EMAIL": "halfxindustries@gmail.com"

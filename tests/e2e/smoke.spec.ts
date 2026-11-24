@@ -112,3 +112,25 @@ test("assigns a SKU automatically from the category", async ({ page }) => {
   await expect(row).toBeVisible();
   await expect(row.getByText(/MCH-\d{3}/)).toBeVisible();
 });
+
+test("creates and issues a quotation", async ({ page }) => {
+  await page.goto("/quotations");
+  await page.getByRole("button", { name: /New quotation/ }).click();
+
+  await page.getByRole("combobox", { name: "Customer" }).click();
+  await page.getByRole("option").first().click();
+
+  await page.getByLabel("Description").first().fill("A4 Copier Paper");
+  await page.getByLabel("Qty").fill("2");
+  await page.getByLabel("Unit price (RM)").fill("23.50");
+
+  await page.getByRole("button", { name: "Create draft" }).click();
+
+  await expect(page).toHaveURL(/\/quotations\/[0-9a-f-]+$/);
+  await expect(page.getByText("Draft quotation")).toBeVisible();
+
+  await page.getByRole("button", { name: "Issue" }).click();
+
+  await expect(page.getByText(/QT-\d{4}/)).toBeVisible();
+  await expect(page.getByText("issued", { exact: true })).toBeVisible();
+});

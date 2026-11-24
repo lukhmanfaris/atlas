@@ -587,7 +587,7 @@
       "title": "Quotations",
       "milestone": "M2",
       "priority": "must",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-03", "F-04", "F-05", "F-06"],
       "acceptance_criteria": [
         "Staff can create a draft quotation for a customer with item-based or free-text lines, edit it and delete it.",

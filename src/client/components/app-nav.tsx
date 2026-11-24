@@ -1,4 +1,4 @@
-import { Home, Package, Settings, Users } from "lucide-react";
+import { FileText, Home, Package, Settings, Users } from "lucide-react";
 import { Link, useLocation } from "react-router";
 
 import { cn } from "@/client/lib/utils";
@@ -7,6 +7,7 @@ const ITEMS = [
   { href: "/", label: "Home", icon: Home, exact: true },
   { href: "/customers", label: "Customers", icon: Users, exact: false },
   { href: "/items", label: "Items", icon: Package, exact: false },
+  { href: "/quotations", label: "Quotes", icon: FileText, exact: false },
   { href: "/settings", label: "Settings", icon: Settings, exact: false },
 ] as const;
 

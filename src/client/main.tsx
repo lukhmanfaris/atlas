@@ -9,6 +9,9 @@ import { CustomerDetailPage } from "./pages/customer-detail";
 import { CustomersPage } from "./pages/customers";
 import { HomePage } from "./pages/home";
 import { ItemsPage } from "./pages/items";
+import { QuotationEditorPage } from "./pages/quotation-editor";
+import { QuotationViewPage } from "./pages/quotation-view";
+import { QuotationsPage } from "./pages/quotations";
 import { SettingsPage } from "./pages/settings";
 import "./styles.css";
 
@@ -27,6 +30,10 @@ const router = createBrowserRouter([
       { path: "customers", element: <CustomersPage /> },
       { path: "customers/:customerId", element: <CustomerDetailPage /> },
       { path: "items", element: <ItemsPage /> },
+      { path: "quotations", element: <QuotationsPage /> },
+      { path: "quotations/new", element: <QuotationEditorPage /> },
+      { path: "quotations/:documentId", element: <QuotationViewPage /> },
+      { path: "quotations/:documentId/edit", element: <QuotationEditorPage /> },
       { path: "settings", element: <SettingsPage /> },
     ],
   },

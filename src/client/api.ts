@@ -152,3 +152,89 @@ export function updateItem(companyId: string, itemId: string, input: UpdateItemI
     companyId,
   );
 }
+
+import type {
+  CreateQuotationInput,
+  DocumentDto,
+  DocumentListRow,
+  UpdateQuotationInput,
+} from "@/shared/documents";
+
+export function listQuotations(
+  companyId: string,
+  options: { status?: string; q?: string } = {},
+) {
+  const params = new URLSearchParams({ type: "quotation" });
+  if (options.status) params.set("status", options.status);
+  if (options.q) params.set("q", options.q);
+
+  return request<{ documents: DocumentListRow[] }>(
+    `/documents?${params.toString()}`,
+    {},
+    companyId,
+  );
+}
+
+export function getQuotation(companyId: string, documentId: string) {
+  return request<{ document: DocumentDto }>(`/documents/${documentId}`, {}, companyId);
+}
+
+export function createQuotation(companyId: string, input: CreateQuotationInput) {
+  return request<{ document: DocumentDto }>(
+    "/documents",
+    { method: "POST", body: JSON.stringify(input) },
+    companyId,
+  );
+}
+
+export function updateQuotation(
+  companyId: string,
+  documentId: string,
+  input: UpdateQuotationInput,
+) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}`,
+    { method: "PATCH", body: JSON.stringify(input) },
+    companyId,
+  );
+}
+
+export function deleteQuotation(companyId: string, documentId: string) {
+  return request<void>(`/documents/${documentId}`, { method: "DELETE" }, companyId);
+}
+
+export function issueQuotation(companyId: string, documentId: string) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/issue`,
+    { method: "POST" },
+    companyId,
+  );
+}
+
+export function decideQuotation(
+  companyId: string,
+  documentId: string,
+  decision: "accept" | "reject",
+) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/${decision}`,
+    { method: "POST" },
+    companyId,
+  );
+}
+
+export function voidQuotation(companyId: string, documentId: string, reason: string) {
+  return request<{ document: DocumentDto }>(
+    `/documents/${documentId}/void`,
+    { method: "POST", body: JSON.stringify({ reason }) },
+    companyId,
+  );
+}
+
+export function documentPdfUrl(documentId: string) {
+  return `${BASE}/documents/${documentId}/pdf`;
+}
+
+export function documentPreviewUrl(documentId: string) {
+  return `${BASE}/documents/${documentId}/preview`;
+}

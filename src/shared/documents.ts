@@ -48,3 +48,53 @@ export const voidDocumentSchema = z.strictObject({
 });
 
 export type VoidDocumentInput = z.infer<typeof voidDocumentSchema>;
+
+export type DocumentLineDto = {
+  id: string;
+  lineNo: number;
+  itemId: string | null;
+  sku: string | null;
+  description: string;
+  unit: string;
+  quantityMilli: number;
+  unitPriceSen: number | null;
+  discountSen: number;
+  lineTotalSen: number | null;
+};
+
+/** What the API returns for one document, plus its lines. */
+export type DocumentDto = {
+  id: string;
+  type: "quotation" | "invoice" | "delivery_order";
+  status: string;
+  number: string | null;
+  customerId: string;
+  issueDate: string;
+  validUntil: string | null;
+  dueDate: string | null;
+  reference: string | null;
+  notes: string | null;
+  terms: string | null;
+  subtotalSen: number;
+  discountSen: number;
+  taxSen: number;
+  totalSen: number;
+  amountInWords: string | null;
+  expired: boolean;
+  pdfR2Key: string | null;
+  voidPdfR2Key: string | null;
+  voidReason: string | null;
+  lines: DocumentLineDto[];
+};
+
+export type DocumentListRow = {
+  id: string;
+  status: string;
+  number: string | null;
+  issueDate: string;
+  validUntil: string | null;
+  dueDate: string | null;
+  totalSen: number;
+  customerName: string;
+  expired: boolean;
+};
