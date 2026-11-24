@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Plus } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router";
 
@@ -56,6 +56,7 @@ function statusBadge(status: string, expired: boolean, paidAt: number | null) {
 
 export function QuotationsPage({ documentType = "quotation" }: { documentType?: "quotation" | "invoice" | "delivery_order" }) {
   const { company } = useCompany();
+  const isOwner = company.role === "owner";
   const [status, setStatus] = useState("all");
   const [q, setQ] = useState("");
   const [customerId, setCustomerId] = useState("all");
@@ -95,6 +96,22 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
             {documentType === "invoice" ? "Invoices" : documentType === "delivery_order" ? "Delivery orders" : "Quotations"} issued by {company.name}.
           </p>
         </div>
+        {isOwner ? (
+          <Button
+            variant="outline"
+            nativeButton={false}
+            render={
+              <a
+                href={`/api/export/documents.csv?type=${documentType}${
+                  from ? `&from=${from}` : ""
+                }${to ? `&to=${to}` : ""}`}
+              />
+            }
+          >
+            <Download className="size-4" />
+            CSV
+          </Button>
+        ) : null}
         {documentType === "delivery_order" ? null : (
           <Button nativeButton={false} render={<Link to={`/${documentType === "invoice" ? "invoices" : "quotations"}/new`} />}>
             <Plus className="size-4" />

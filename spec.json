@@ -687,7 +687,7 @@
       "title": "CSV export",
       "milestone": "M3",
       "priority": "could",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-08"],
       "acceptance_criteria": [
         "The owner can export documents of a type and date range as CSV with number, date, customer, status and total in RM.",
