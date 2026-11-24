@@ -39,6 +39,19 @@ describe("CSV export", () => {
     expect(text).toContain('"INV-1000","24/11/2026","Maju Jaya Sdn Bhd","issued","47.00"');
   });
 
+  it("accepts the company from the query string, for plain download links", async () => {
+    const email = await uniqueEmail("owner");
+    const userId = await seedUser(email);
+    const companyId = await seedCompany("Delta Sdn Bhd");
+    await seedMembership(companyId, userId, "owner");
+
+    const response = await call(`/api/export/documents.csv?company_id=${companyId}&type=invoice`, {
+      as: email,
+    });
+
+    expect(response.status).toBe(200);
+  });
+
   it("is owner-only", async () => {
     const email = await uniqueEmail("staff");
     const userId = await seedUser(email);

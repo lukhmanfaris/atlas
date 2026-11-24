@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 
-import { requireCompany, requireOwner } from "@/worker/auth/company";
 import type { AppEnv } from "@/worker/auth/middleware";
+import { createDb } from "@/worker/db/client";
+import { findMembership } from "@/worker/db/members";
 import { apiError } from "@/worker/errors";
 
 export const exportRoutes = new Hono<AppEnv>();
@@ -21,7 +22,21 @@ function csvCell(value: string): string {
   return `"${value.replace(/"/g, '""')}"`;
 }
 
-exportRoutes.get("/documents.csv", requireCompany, requireOwner, async (c) => {
+exportRoutes.get("/documents.csv", async (c) => {
+  // A download link cannot send headers, so the company may come in the query.
+  const companyId = c.req.query("company_id") ?? c.req.header("X-Company-Id");
+  if (!companyId) {
+    return apiError(c, 400, "validation_error", "The company_id parameter is required.");
+  }
+
+  const membership = await findMembership(createDb(c.env.DB), companyId, c.get("user").id);
+  if (!membership) {
+    return apiError(c, 403, "forbidden", "You are not a member of this company.");
+  }
+  if (membership.role !== "owner") {
+    return apiError(c, 403, "forbidden", "Only a company owner can export.");
+  }
+
   const type = c.req.query("type") ?? "invoice";
   if (!["quotation", "invoice", "delivery_order"].includes(type)) {
     return apiError(c, 400, "validation_error", "Unknown document type.");
@@ -30,7 +45,7 @@ exportRoutes.get("/documents.csv", requireCompany, requireOwner, async (c) => {
   const from = c.req.query("from")?.trim();
   const to = c.req.query("to")?.trim();
   const conditions = ["d.company_id = ?", "d.type = ?", "d.status != 'draft'"];
-  const params: unknown[] = [c.get("company").id, type];
+  const params: unknown[] = [companyId, type];
 
   if (from) {
     conditions.push("d.issue_date >= ?");

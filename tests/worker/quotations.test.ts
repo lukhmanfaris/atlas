@@ -444,3 +444,24 @@ describe("convert to invoice", () => {
     expect(response.status).toBe(409);
   });
 });
+
+describe("browser downloads", () => {
+  it("serves the preview without a company header", async () => {
+    const { email, companyId, customerId } = await setup();
+    const { id } = await createQuotation(email, companyId, customerId);
+
+    const response = await call(`/api/documents/${id}/preview`, { as: email });
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("QUOTATION");
+  });
+
+  it("still refuses a document from a company the user does not belong to", async () => {
+    const mine = await setup();
+    const other = await setup();
+    const { id } = await createQuotation(other.email, other.companyId, other.customerId);
+
+    const response = await call(`/api/documents/${id}/preview`, { as: mine.email });
+    expect(response.status).toBe(403);
+  });
+});

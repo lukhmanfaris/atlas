@@ -102,7 +102,7 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
             nativeButton={false}
             render={
               <a
-                href={`/api/export/documents.csv?type=${documentType}${
+                href={`/api/export/documents.csv?company_id=${company.id}&type=${documentType}${
                   from ? `&from=${from}` : ""
                 }${to ? `&to=${to}` : ""}`}
               />
