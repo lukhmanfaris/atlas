@@ -7,6 +7,7 @@ export const documentLineSchema = z.strictObject({
   itemId: z.string().trim().min(1).nullish(),
   sku: z.string().trim().max(60).nullish(),
   description: z.string().trim().min(1).max(500),
+  details: nullableText(500),
   unit: z.string().trim().min(1).max(20),
   quantityMilli: z.number().int().positive().max(1_000_000_000),
   unitPriceSen: z.number().int().min(0).max(100_000_000),
@@ -82,6 +83,7 @@ export type DocumentLineDto = {
   itemId: string | null;
   sku: string | null;
   description: string;
+  details: string | null;
   unit: string;
   quantityMilli: number;
   unitPriceSen: number | null;

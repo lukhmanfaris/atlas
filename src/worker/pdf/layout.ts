@@ -30,6 +30,7 @@ export type PdfLine = {
   lineNo: number;
   sku?: string | null;
   description: string;
+  details?: string | null;
   unit: string;
   quantityMilli: number;
   unitPriceSen?: number | null;
@@ -110,7 +111,7 @@ const STYLES = `
     z-index: 0;
     pointer-events: none;
   }
-  .sheet { position: relative; z-index: 1; min-height: 252mm; display: flex; flex-direction: column; }
+  .sheet { position: relative; z-index: 1; min-height: 267mm; display: flex; flex-direction: column; }
   .bottom { margin-top: auto; }
   .stamp { text-align: right; margin-top: 6mm; }
   .stamp img { width: 57mm; max-height: 57mm; object-fit: contain; }
@@ -120,17 +121,21 @@ const STYLES = `
   .company-name { font-size: 13pt; font-weight: 700; }
   .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
   .doc-title { text-align: right; min-width: 78mm; }
-  .doc-title h1 { margin: 0 0 2mm; font-size: 18pt; letter-spacing: 0.08em; color: var(--brand, #111827); }
+  .doc-title h1 { margin: 0 0 3mm; font-size: 30pt; letter-spacing: 0.08em; color: var(--brand, #111827); }
   .doc-number { font-size: 11pt; font-weight: 600; }
   .meta-table { margin-top: 6mm; width: 100%; border-collapse: collapse; }
-  .meta-table td { padding: 1mm 0; vertical-align: top; font-size: 10pt; }
+  .meta-table td { padding: 0.6mm 0; vertical-align: top; font-size: 10pt; }
   .meta-table td.label { color: #6b7280; padding-right: 4mm; text-align: right; }
   .meta-table td.value { text-align: right; }
   .customer-block { margin-top: 6mm; display: flex; gap: 8mm; }
   .customer-block > div { flex: 1; }
   .block-title { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 1mm; }
   .address { white-space: pre-line; }
-  table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; }
+  table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; table-layout: fixed; }
+  table.lines th:nth-child(1) { width: 10mm; }
+  table.lines th:last-child { width: 30mm; }
+  table.lines th:nth-last-child(2) { width: 30mm; }
+  table.lines th:nth-child(2) { width: auto; }
   table.lines thead { display: table-header-group; }
   table.lines tr { page-break-inside: avoid; }
   table.lines th {
@@ -142,7 +147,8 @@ const STYLES = `
     border-bottom: 0.4mm solid #111827;
     padding: 2mm 1.5mm;
   }
-  table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: top; font-size: 10pt; }
+  table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: middle; font-size: 10pt; }
+  .line-details { color: #6b7280; margin-top: 1mm; }
   .num { text-align: right; white-space: nowrap; }
   .qty { text-align: right; white-space: nowrap; }
   .totals { margin-top: 5mm; margin-left: auto; width: 70mm; }
@@ -255,7 +261,9 @@ export function lineRows(model: PdfModel, withPrices: boolean) {
         const cells = [
           `<td>${line.lineNo}</td>`,
           withPrices ? "" : `<td>${escapeText(line.sku ?? "")}</td>`,
-          `<td>${escapeText(line.description)}</td>`,
+          `<td>${escapeText(line.description)}${
+            line.details ? `<div class="line-details">${escapeText(line.details)}</div>` : ""
+          }</td>`,
           `<td class="qty">${formatQty(line.quantityMilli)}</td>`,
           withPrices ? `<td class="num">${formatMoney(line.unitPriceSen ?? 0)}</td>` : "",
           withPrices ? `<td class="num">${formatMoney(line.lineTotalSen ?? 0)}</td>` : "",
@@ -271,7 +279,7 @@ export function stampBlock(model: PdfModel) {
   if (!model.company.stampUrl) {
     return "";
   }
-  if (model.type !== "delivery_order" && !model.paid) {
+  if (model.type !== "delivery_order" && !model.paid && model.variant !== "draft") {
     return "";
   }
   return html`<div class="stamp"><img src="${model.company.stampUrl}" alt="" /></div>`;

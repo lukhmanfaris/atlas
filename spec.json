@@ -313,6 +313,7 @@
         { "name": "item_id", "type": "text", "references": "items.id", "notes": "Optional; free-text lines allowed" },
         { "name": "sku", "type": "text", "notes": "Copied from the item" },
         { "name": "description", "type": "text", "required": true },
+        { "name": "details", "type": "text", "notes": "Optional second line printed under the item, e.g. print specification" },
         { "name": "unit", "type": "text", "required": true },
         { "name": "quantity_milli", "type": "integer", "required": true, "notes": "Greater than 0" },
         { "name": "unit_price_sen", "type": "integer", "notes": "Null on delivery order lines" },
@@ -777,6 +778,7 @@
     { "date": "2026-11-25", "decision": "v1 marks an invoice paid with a chosen date; a payments ledger is deferred", "why": "The owner needs a simple paid marker now. Partial payments, methods and balances need a payments table, which changes the data model and the invoice totals story, so it stays in the next phase" },
     { "date": "2026-11-25", "decision": "PROJECT.md and CLAUDE.md rewritten to describe the built system, not the plan", "why": "A new chat must be able to start from three documents instead of scanning the code. spec.json remains the source of truth for behaviour" },
     { "date": "2026-11-25", "decision": "PDF tables drop the Unit and Discount columns; per-line discounts are no longer offered", "why": "The owner keeps pricing simple. The whole-document discount in the totals block remains, and the line_total formula still tolerates a per-line discount for historical rows" },
-    { "date": "2026-11-25", "decision": "Paid invoices get a separate stamped PDF copy; the issued file is never overwritten", "why": "The stamp marks payment but the original document is a 7-year record. A -paid.pdf sits beside the original, like the -void.pdf copy" }
+    { "date": "2026-11-25", "decision": "Paid invoices get a separate stamped PDF copy; the issued file is never overwritten", "why": "The stamp marks payment but the original document is a 7-year record. A -paid.pdf sits beside the original, like the -void.pdf copy" },
+    { "date": "2026-11-25", "decision": "Document lines carry an optional details line, printed under the item name", "why": "Printing jobs need specifications (colours, stock, sides) without turning the item name into a paragraph. The catalogue item's description fills it automatically" }
   ]
 }

@@ -151,6 +151,39 @@ describe("document templates", () => {
     expect(renderDocumentHtml(model({ company })).toString()).not.toContain('class="stamp"');
   });
 
+  it("prints item details under the description", () => {
+    const html = renderDocumentHtml(
+      model({
+        lines: [
+          {
+            lineNo: 1,
+            sku: "BOX-A4",
+            description: "Flyer",
+            details: "2-colour print, 250 gsm art card, front and back",
+            unit: "lot",
+            quantityMilli: 1000,
+            unitPriceSen: 1000,
+            discountSen: 0,
+            lineTotalSen: 1000,
+          },
+        ],
+      }),
+    ).toString();
+
+    expect(html).toContain('class="line-details"');
+    expect(html).toContain("2-colour print");
+  });
+
+  it("shows the stamp on an invoice draft as well", () => {
+    const company = { ...COMPANY_SNAPSHOT, logoUrl: null, stampUrl: "data:image/png;base64,AAAA" };
+    const html = renderDocumentHtml(
+      model({ company, variant: "draft", number: null }),
+    ).toString();
+
+    expect(html).toContain('class="stamp"');
+    expect(html).toContain("DRAFT");
+  });
+
   it("watermarks a void copy", () => {
     const html = renderDocumentHtml(model({ variant: "void" })).toString();
     expect(html).toContain("VOID");

@@ -58,6 +58,7 @@ type LineRow = {
   line_no: number;
   sku: string | null;
   description: string;
+  details: string | null;
   unit: string;
   quantity_milli: number;
   unit_price_sen: number | null;
@@ -199,7 +200,7 @@ export async function loadDocument(
 
   const linesResult = await d1
     .prepare(
-      `SELECT line_no, sku, description, unit, quantity_milli, unit_price_sen,
+      `SELECT line_no, sku, description, details, unit, quantity_milli, unit_price_sen,
               discount_sen, line_total_sen
        FROM document_lines WHERE document_id = ? ORDER BY line_no`,
     )
@@ -210,6 +211,7 @@ export async function loadDocument(
     lineNo: line.line_no,
     sku: line.sku,
     description: line.description,
+    details: line.details,
     unit: line.unit,
     quantityMilli: line.quantity_milli,
     unitPriceSen: line.unit_price_sen,

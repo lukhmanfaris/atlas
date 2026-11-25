@@ -35,6 +35,7 @@ type LineState = {
   itemId: string;
   sku: string;
   description: string;
+  details: string;
   unit: string;
   quantity: string;
   price: string;
@@ -46,6 +47,7 @@ function emptyLine(): LineState {
     itemId: "NONE",
     sku: "",
     description: "",
+    details: "",
     unit: "pcs",
     quantity: "1",
     price: "0.00",
@@ -103,6 +105,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
         itemId: line.itemId ?? "NONE",
         sku: line.sku ?? "",
         description: line.description,
+        details: line.details ?? "",
         unit: line.unit,
         quantity: milliToQty(line.quantityMilli),
         price: senToRinggit(line.unitPriceSen ?? 0),
@@ -136,6 +139,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
           itemId: line.itemId === "NONE" ? null : line.itemId,
           sku: line.sku || null,
           description: line.description,
+          details: line.details || null,
           unit: line.unit,
           quantityMilli,
           unitPriceSen,
@@ -195,7 +199,8 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
     setLine(key, {
       itemId: item.id,
       sku: item.sku ?? "",
-      description: item.description ? `${item.name} — ${item.description}` : item.name,
+      description: item.name,
+      details: item.description ?? "",
       unit: item.unit,
       price: senToRinggit(item.unitPriceSen),
     });
@@ -316,6 +321,13 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
                   />
                 </Field>
               </div>
+
+              <Field label="Details" hint="Optional second line printed under the item.">
+                <Input
+                  value={line.details}
+                  onChange={(event) => setLine(line.key, { details: event.target.value })}
+                />
+              </Field>
 
               <div className="grid gap-3 sm:grid-cols-4">
                 <Field label="Qty">

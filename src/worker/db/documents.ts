@@ -46,6 +46,7 @@ function lineRows(documentId: string, lines: LineWithSource[]) {
     itemId: line.itemId ?? null,
     sku: line.sku ?? null,
     description: line.description,
+    details: line.details ?? null,
     unit: line.unit,
     quantityMilli: line.quantityMilli,
     unitPriceSen: line.unitPriceSen,

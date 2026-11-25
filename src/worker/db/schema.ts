@@ -208,6 +208,7 @@ export const documentLines = sqliteTable(
     itemId: text("item_id").references(() => items.id),
     sku: text("sku"),
     description: text("description").notNull(),
+    details: text("details"),
     unit: text("unit").notNull(),
     quantityMilli: integer("quantity_milli").notNull(),
     unitPriceSen: integer("unit_price_sen"),
