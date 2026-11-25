@@ -412,7 +412,9 @@
     "common": {
       "page": "A4 portrait, 15 mm margins, 10 pt body text, table header repeats on each page, footer 'Page X of Y'",
       "header": "Company logo at top left with the company name, registration number and address below it; document title and meta rows aligned to the same top line on the right. The address prints in at most three lines: street lines, then postcode and city, then state. Country is omitted",
-      "customer_block": "Customer name, registration number, billing address, contact person and phone",
+      "customer_block": "Customer name, registration number, billing address, contact person and phone. The Bill To block is capped at half the page width, so a long name or address wraps at the centre",
+      "line_details": "Item details print under the description and keep the line breaks typed in the editor or the item form",
+      "column_alignment": "U.Price and Qty headers and values are centred in their columns; Amount is right-aligned",
       "generated_note": "Pinned to the bottom of the last page: 'This is a computer-generated document. No signature is required.' on quotations and invoices",
       "void": "Voided documents get a copy with a diagonal VOID watermark; the original stored PDF is never overwritten"
     },
@@ -429,6 +431,7 @@
       "meta": ["Invoice No.", "Date", "Terms (e.g. 30 days)", "Due Date", "Quotation No. (if converted)"],
       "columns": ["No.", "Description", "Qty", "Unit Price (RM)", "Amount (RM)"],
       "totals": ["Subtotal", "Discount", "Total (RM)"],
+      "paid_copy_totals": "The paid copy labels the grand total 'Total Paid (RM)'; the issued original keeps 'Total (RM)'",
       "below_totals": ["Amount in words", "Bank details for payment", "Notes"]
     },
     "delivery_order": {
@@ -779,6 +782,7 @@
     { "date": "2026-11-25", "decision": "PROJECT.md and CLAUDE.md rewritten to describe the built system, not the plan", "why": "A new chat must be able to start from three documents instead of scanning the code. spec.json remains the source of truth for behaviour" },
     { "date": "2026-11-25", "decision": "PDF tables drop the Unit and Discount columns; per-line discounts are no longer offered", "why": "The owner keeps pricing simple. The whole-document discount in the totals block remains, and the line_total formula still tolerates a per-line discount for historical rows" },
     { "date": "2026-11-25", "decision": "Paid invoices get a separate stamped PDF copy; the issued file is never overwritten", "why": "The stamp marks payment but the original document is a 7-year record. A -paid.pdf sits beside the original, like the -void.pdf copy" },
-    { "date": "2026-11-25", "decision": "Document lines carry an optional details line, printed under the item name", "why": "Printing jobs need specifications (colours, stock, sides) without turning the item name into a paragraph. The catalogue item's description fills it automatically" }
+    { "date": "2026-11-25", "decision": "Document lines carry an optional details line, printed under the item name", "why": "Printing jobs need specifications (colours, stock, sides) without turning the item name into a paragraph. The catalogue item's description fills it automatically" },
+    { "date": "2026-11-25", "decision": "PDF layout: Bill To wraps at the page centre, item details keep line breaks, U.Price and Qty are centred, and the paid copy reads 'Total Paid (RM)'", "why": "Owner review of a real invoice: long customer names ran across the page, multi-line specifications were squashed into one paragraph, and a paid copy should say the total was paid. Paid copies already stored keep 'Total (RM)' because stored PDFs are never overwritten" }
   ]
 }
