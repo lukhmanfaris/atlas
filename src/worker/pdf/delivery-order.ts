@@ -38,7 +38,7 @@ export function renderDeliveryOrder(model: PdfModel) {
           <div class="address">${deliverTo}</div>
         </div>
       </div>
-      <table class="lines">
+      <table class="lines no-prices">
         <thead>
           <tr>
             <th>No.</th>

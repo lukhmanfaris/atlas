@@ -140,17 +140,22 @@ const STYLES = `
   .block-title { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 1mm; }
   .address { white-space: pre-line; }
   table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; table-layout: fixed; }
-  table.lines th:nth-child(1) { width: 10mm; }
-  table.lines th:last-child { width: 30mm; }
-  table.lines th:nth-last-child(2) { width: 30mm; }
-  table.lines th:nth-child(2) { width: auto; }
+  table.lines.with-prices th:nth-child(1) { width: 10mm; }
+  table.lines.with-prices th:nth-child(2) { width: auto; }
+  table.lines.with-prices th:nth-child(3) { width: 14mm; }
+  table.lines.with-prices th:nth-child(4) { width: 34mm; }
+  table.lines.with-prices th:nth-child(5) { width: 32mm; }
+  table.lines.no-prices th:nth-child(1) { width: 10mm; }
+  table.lines.no-prices th:nth-child(2) { width: 32mm; }
+  table.lines.no-prices th:nth-child(3) { width: auto; }
+  table.lines.no-prices th:nth-child(4) { width: 14mm; }
   table.lines thead { display: table-header-group; }
   table.lines tr { page-break-inside: avoid; }
   table.lines th {
     text-align: left;
     font-size: 10pt;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.02em;
     color: #374151;
     border-bottom: 0.4mm solid #111827;
     padding: 2mm 1.5mm;
@@ -158,7 +163,8 @@ const STYLES = `
   table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: middle; font-size: 10pt; }
   .line-details { color: #6b7280; margin-top: 1mm; }
   .num { text-align: right; white-space: nowrap; }
-  .qty { text-align: right; white-space: nowrap; }
+  .price { text-align: left; white-space: nowrap; }
+  .qty { text-align: left; white-space: nowrap; }
   .totals { margin-top: 5mm; margin-left: auto; width: 70mm; }
   .totals table { width: 100%; border-collapse: collapse; }
   .totals td { padding: 1.2mm 0; font-size: 10pt; }
@@ -277,7 +283,7 @@ export function lineRows(model: PdfModel, withPrices: boolean) {
             line.details ? `<div class="line-details">${escapeText(line.details)}</div>` : ""
           }</td>`,
           `<td class="qty">${formatQty(line.quantityMilli)}</td>`,
-          withPrices ? `<td class="num">${formatMoney(line.unitPriceSen ?? 0)}</td>` : "",
+          withPrices ? `<td class="price">${formatMoney(line.unitPriceSen ?? 0)}</td>` : "",
           withPrices ? `<td class="num">${formatMoney(line.lineTotalSen ?? 0)}</td>` : "",
         ];
         return `<tr>${cells.join("")}</tr>`;

@@ -26,13 +26,13 @@ export function renderInvoice(model: PdfModel) {
         { label: "Quotation No.", value: model.sourceNumber },
       ])}
       ${customerBlock(model)}
-      <table class="lines">
+      <table class="lines with-prices">
         <thead>
           <tr>
             <th>No.</th>
             <th>Description</th>
             <th class="qty">Qty</th>
-            <th class="num">Unit Price (RM)</th>
+            <th class="price">Unit Price (RM)</th>
             <th class="num">Amount (RM)</th>
           </tr>
         </thead>
