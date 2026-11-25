@@ -22,7 +22,6 @@ export function renderInvoice(model: PdfModel) {
         { label: "Invoice No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Terms", value: terms },
-        { label: "Quotation No.", value: model.sourceNumber },
       ])}
       ${customerBlock(model)}
       <table class="lines with-prices">
