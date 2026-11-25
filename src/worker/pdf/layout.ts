@@ -115,14 +115,21 @@ const STYLES = `
   .bottom { margin-top: auto; }
   .stamp { text-align: right; margin-top: 6mm; }
   .stamp img { width: 57mm; max-height: 57mm; object-fit: contain; }
-  header.doc-header { display: flex; justify-content: space-between; gap: 10mm; align-items: flex-start; }
+  header.doc-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 10mm;
+    align-items: start;
+  }
+  .doc-logo { grid-column: 1; grid-row: 1; margin-bottom: 2mm; }
+  .doc-title { grid-column: 2; grid-row: 1; margin: 0; font-size: 30pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: right; }
+  .company { grid-column: 1; grid-row: 2; }
+  .doc-meta { grid-column: 2; grid-row: 2; }
   .company { max-width: 105mm; }
   .company img.logo { max-height: 30mm; max-width: 60mm; object-fit: contain; display: block; margin-bottom: 2mm; }
   .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
   .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
-  .doc-title { text-align: right; min-width: 78mm; }
-  .doc-title h1 { margin: 0 0 3mm; font-size: 30pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); }
-  .doc-number { font-size: 11pt; font-weight: 600; }
+      .doc-number { font-size: 11pt; font-weight: 600; }
   .meta-table { margin-top: 6mm; width: 100%; border-collapse: collapse; }
   .meta-table td { padding: 0.6mm 0; vertical-align: top; font-size: 10pt; }
   .meta-table td.label { color: #6b7280; padding-right: 4mm; text-align: right; }
@@ -201,11 +208,16 @@ export function header(
   rows: { label: string; value: string | null | undefined }[],
 ) {
   // "Malaysia" is redundant on documents issued by a Malaysian company.
-  const address = model.company.addressLines.filter((line) => line.trim().toLowerCase() !== "malaysia");
+  const address = model.company.addressLines.filter(
+    (line) => line.trim().toLowerCase() !== "malaysia",
+  );
 
   return html`<header class="doc-header">
-  <div class="company">
+  <div class="doc-logo">
     ${model.company.logoUrl ? html`<img class="logo" src="${model.company.logoUrl}" alt="" />` : ""}
+  </div>
+  <h1 class="doc-title">${title}</h1>
+  <div class="company">
     <div class="company-name">${model.company.name}</div>
     <div class="company-meta">${[
       model.company.registrationNo,
@@ -216,8 +228,7 @@ export function header(
       .filter(Boolean)
       .join("\n")}</div>
   </div>
-  <div class="doc-title">
-    <h1>${title}</h1>
+  <div class="doc-meta">
     <table class="meta-table">
       ${raw(
         rows
