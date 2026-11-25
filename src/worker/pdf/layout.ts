@@ -138,7 +138,7 @@ const STYLES = `
   .meta-table td.label { color: #6b7280; padding-right: 4mm; text-align: right; }
   .meta-table td.value { text-align: right; }
   .customer-block { margin-top: 6mm; display: flex; gap: 8mm; }
-  .customer-block > div { flex: 1; }
+  .customer-block > div { flex: 1; max-width: 50%; overflow-wrap: break-word; }
   .block-title { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 1mm; }
   .address { white-space: pre-line; }
   table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; table-layout: fixed; }
@@ -165,13 +165,13 @@ const STYLES = `
   table.lines td { padding: 2mm 1.5mm; vertical-align: middle; font-size: 10pt; }
   table.lines.single tr td { border-bottom: none; }
   table.lines.multi tr:not(:last-child) td { border-bottom: 0.3mm solid #111827; }
-  .line-details { color: #6b7280; margin-top: 1mm; }
+  .line-details { color: #6b7280; margin-top: 1mm; white-space: pre-line; }
   .num { text-align: right; white-space: nowrap; }
   table.lines th.num { text-align: right; }
   table.lines th.price,
-  table.lines th.qty { text-align: left; }
-  .price { text-align: left; white-space: nowrap; }
-  .qty { text-align: left; white-space: nowrap; }
+  table.lines th.qty { text-align: center; }
+  .price { text-align: center; white-space: nowrap; }
+  .qty { text-align: center; white-space: nowrap; }
   .totals { margin-top: 6mm; width: 100%; }
   .totals .rule { border-top: 0.4mm solid #111827; }
   .totals-line { display: flex; justify-content: space-between; width: 70mm; margin-left: auto; padding: 1.2mm 1.5mm 1.2mm 0; font-size: 10pt; }
@@ -331,7 +331,7 @@ export function totals(model: PdfModel) {
     <div class="rule"></div>
     <div class="totals-grand">
       <div class="totals-words">${model.amountInWords ?? ""}</div>
-      <div class="totals-line grand"><span>Total (RM)</span><span>${formatMoney(model.totalSen)}</span></div>
+      <div class="totals-line grand"><span>${model.paid ? "Total Paid (RM)" : "Total (RM)"}</span><span>${formatMoney(model.totalSen)}</span></div>
     </div>
   </div>`;
 }

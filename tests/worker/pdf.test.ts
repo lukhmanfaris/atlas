@@ -186,6 +186,53 @@ describe("document templates", () => {
     expect(html).toContain("2-colour print");
   });
 
+  it("keeps each line break in item details on its own line", () => {
+    const html = renderDocumentHtml(
+      model({
+        lines: [
+          {
+            lineNo: 1,
+            description: "Cotton Tshirt Printing",
+            details: "Short Sleeve S-4XL\nPrinting Method: Silkscreen",
+            unit: "pcs",
+            quantityMilli: 66000,
+            unitPriceSen: 1500,
+            discountSen: 0,
+            lineTotalSen: 99000,
+          },
+        ],
+      }),
+    ).toString();
+
+    expect(html).toContain(
+      '<div class="line-details">Short Sleeve S-4XL\nPrinting Method: Silkscreen</div>',
+    );
+    expect(html).toMatch(/\.line-details \{[^}]*white-space: pre-line/);
+  });
+
+  it("wraps the Bill To block at the middle of the page", () => {
+    const html = renderDocumentHtml(model()).toString();
+
+    expect(html).toMatch(/\.customer-block > div \{[^}]*max-width: 50%/);
+  });
+
+  it("centres the unit price and quantity columns", () => {
+    const html = renderDocumentHtml(model()).toString();
+
+    expect(html).toMatch(/table\.lines th\.price,\s*table\.lines th\.qty \{ text-align: center; \}/);
+    expect(html).toMatch(/\n\s*\.price \{ text-align: center;/);
+    expect(html).toMatch(/\n\s*\.qty \{ text-align: center;/);
+  });
+
+  it("labels the total as paid only on a paid invoice copy", () => {
+    const paid = renderDocumentHtml(model({ paid: true })).toString();
+    expect(paid).toContain("Total Paid (RM)");
+
+    const unpaid = renderDocumentHtml(model()).toString();
+    expect(unpaid).toContain("Total (RM)");
+    expect(unpaid).not.toContain("Total Paid");
+  });
+
   it("shows the stamp on an invoice draft as well", () => {
     const company = { ...COMPANY_SNAPSHOT, logoUrl: null, stampUrl: "data:image/png;base64,AAAA" };
     const html = renderDocumentHtml(
