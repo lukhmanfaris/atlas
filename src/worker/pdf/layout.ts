@@ -123,8 +123,8 @@ const STYLES = `
     column-gap: 10mm;
     align-items: start;
   }
-  .doc-logo { grid-column: 2; grid-row: 1; margin-bottom: 2mm; justify-self: end; }
-  .doc-title { grid-column: 1; grid-row: 1; margin: 0; font-size: 25pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: left; }
+  .doc-logo { grid-column: 2; grid-row: 1; margin-bottom: 2mm; justify-self: end; align-self: center; }
+  .doc-title { grid-column: 1; grid-row: 1; margin: 0; font-size: 25pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: left; align-self: center; }
   .company { grid-column: 1; grid-row: 2; }
   .doc-meta { grid-column: 2; grid-row: 2; }
   .company { max-width: 105mm; }
@@ -146,7 +146,7 @@ const STYLES = `
   table.lines.with-prices th:nth-child(2) { width: auto; }
   table.lines.with-prices th:nth-child(3) { width: 34mm; }
   table.lines.with-prices th:nth-child(4) { width: 14mm; }
-  table.lines.with-prices th:nth-child(5) { width: 32mm; }
+  table.lines.with-prices th:nth-child(5) { width: 42mm; }
   table.lines.no-prices th:nth-child(1) { width: 10mm; }
   table.lines.no-prices th:nth-child(2) { width: 32mm; }
   table.lines.no-prices th:nth-child(3) { width: auto; }
