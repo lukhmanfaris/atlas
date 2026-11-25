@@ -8,6 +8,7 @@ import { Input } from "@/client/components/ui/input";
 import { milliToQty, qtyToMilli } from "@/shared/quantities";
 
 import { getQuotation, updateQuotation } from "../api";
+import { DateField } from "../components/date-field";
 import { Field } from "../components/field";
 import { useCompany } from "../company";
 
@@ -24,6 +25,7 @@ export function DeliveryOrderEditorPage() {
   const { company } = useCompany();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Row[] | null>(null);
+  const [issueDate, setIssueDate] = useState("");
   const [receivedBy, setReceivedBy] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -34,6 +36,7 @@ export function DeliveryOrderEditorPage() {
   });
 
   if (document.data && rows === null) {
+    setIssueDate(document.data.document.issueDate);
     setRows(
       document.data.document.lines.map((line) => ({
         id: line.id,
@@ -48,6 +51,7 @@ export function DeliveryOrderEditorPage() {
   const save = useMutation({
     mutationFn: () =>
       updateQuotation(company.id, documentId ?? "", {
+        issueDate,
         lines: (rows ?? []).map((row) => {
           const quantityMilli = qtyToMilli(row.quantity);
           if (quantityMilli === null || quantityMilli <= 0) {
@@ -79,9 +83,23 @@ export function DeliveryOrderEditorPage() {
       <header>
         <h1 className="text-2xl font-semibold tracking-tight">Edit delivery order</h1>
         <p className="text-sm text-muted-foreground">
-          Lower a quantity or remove a line. You can never deliver more than the invoice has left.
+          Set the delivery date, lower a quantity or remove a line. You can never deliver more than
+          the invoice has left. Everything locks once the delivery order is issued.
         </p>
       </header>
+
+      <Card>
+        <CardHeader className="border-b">
+          <CardTitle className="text-base">Delivery</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="max-w-xs">
+            <Field label="Delivery date" hint="Printed on the delivery order. Pick an earlier day to backdate.">
+              <DateField value={issueDate} onChange={setIssueDate} />
+            </Field>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="border-b">
@@ -127,7 +145,7 @@ export function DeliveryOrderEditorPage() {
           Cancel
         </Button>
         <Button onClick={() => save.mutate()} disabled={save.isPending || rows.length === 0}>
-          {save.isPending ? "Saving…" : "Save quantities"}
+          {save.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
       <input type="hidden" value={receivedBy} onChange={(event) => setReceivedBy(event.target.value)} />

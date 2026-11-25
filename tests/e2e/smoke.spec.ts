@@ -150,6 +150,32 @@ test("creates and issues an invoice", async ({ page }) => {
   await expect(page.getByText(/INV-\d{4}/)).toBeVisible();
 });
 
+test("lets a draft delivery order pick its delivery date", async ({ page }) => {
+  const [year, month, day] = new Date(Date.now() + 8 * 3_600_000)
+    .toISOString()
+    .slice(0, 10)
+    .split("-");
+  const today = `${day}/${month}/${year}`;
+
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: /New invoice/ }).click();
+  await page.getByPlaceholder("Customer name").fill(`E2E DO Date Buyer ${Date.now()}`);
+  await page.getByLabel("Billing address").fill("4 Test Road\n50000 Kuala Lumpur");
+  await page.getByLabel("Description").first().fill("Cotton Tshirt Printing");
+  await page.getByLabel("Qty").fill("10");
+  await page.getByLabel("Unit price (RM)").fill("15.00");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page).toHaveURL(/\/invoices\/[0-9a-f-]+$/);
+  await page.getByRole("button", { name: "Issue" }).click();
+  await expect(page.getByText(/INV-\d{4}/).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Create delivery order" }).click();
+  await expect(page).toHaveURL(/\/delivery-orders\/[0-9a-f-]+$/);
+  await page.goto(`${page.url()}/edit`);
+
+  await expect(page.getByRole("button", { name: /^Delivery date/ })).toHaveText(today);
+});
+
 test("keeps line breaks typed into item details", async ({ page }) => {
   const details = "Short Sleeve S-4XL\nPrinting Method: Silkscreen";
 
