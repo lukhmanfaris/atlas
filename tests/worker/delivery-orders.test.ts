@@ -225,6 +225,35 @@ describe("delivery orders", () => {
     expect(fromVoid.status).toBe(409);
   });
 
+  it("backdates a draft delivery order and keeps the date through issue", async () => {
+    const { email, companyId, invoiceId } = await issuedInvoice();
+    const created = await createDeliveryOrder(email, companyId, invoiceId);
+    const documentId = ((await created.json()) as { document: { id: string } }).document.id;
+
+    const patched = await call(`/api/documents/${documentId}`, {
+      as: email,
+      companyId,
+      method: "PATCH",
+      body: { issueDate: "2026-11-01" },
+    });
+    expect(patched.status).toBe(200);
+
+    const draft = (await (await call(`/api/documents/${documentId}`, { as: email, companyId })).json()) as {
+      document: { issueDate: string; deliveryDate: string | null };
+    };
+    expect(draft.document).toMatchObject({ issueDate: "2026-11-01", deliveryDate: "2026-11-01" });
+
+    const issued = await call(`/api/documents/${documentId}/issue`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+    expect(
+      ((await issued.json()) as { document: { issueDate: string; deliveryDate: string | null } })
+        .document,
+    ).toMatchObject({ issueDate: "2026-11-01", deliveryDate: "2026-11-01" });
+  });
+
   it("marks delivered and returns the quantities when voided", async () => {
     const { email, companyId, invoiceId } = await issuedInvoice();
     const created = await createDeliveryOrder(email, companyId, invoiceId);

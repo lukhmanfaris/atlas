@@ -106,6 +106,15 @@ describe("document templates", () => {
     expect(html).not.toContain("58.75");
   });
 
+  it("prints one Delivery Date on a delivery order", () => {
+    const html = renderDocumentHtml(
+      model({ type: "delivery_order", number: "DO-1000", issueDate: "2026-11-01" }),
+    ).toString();
+
+    expect(html).toContain('<td class="label">Delivery Date</td><td class="value">01/11/2026</td>');
+    expect(html).not.toContain('<td class="label">Date</td>');
+  });
+
   it("marks a draft and says it is not valid", () => {
     const html = renderDocumentHtml(model({ variant: "draft", number: null })).toString();
 

@@ -441,6 +441,10 @@ documentRoutes.patch("/:documentId", requireCompany, async (c) => {
   await updateDraftHeader(db, companyId, documentId, {
     ...(resolvedCustomerId ? { customerId: resolvedCustomerId } : {}),
     ...(parsed.data.issueDate ? { issueDate: parsed.data.issueDate } : {}),
+    // A delivery order has one date: its delivery date follows the issue date.
+    ...(parsed.data.issueDate && document.type === "delivery_order"
+      ? { deliveryDate: parsed.data.issueDate }
+      : {}),
     ...(parsed.data.validUntil !== undefined ? { validUntil: parsed.data.validUntil } : {}),
     ...(parsed.data.notes !== undefined ? { notes: parsed.data.notes } : {}),
     ...(parsed.data.terms !== undefined ? { terms: parsed.data.terms } : {}),

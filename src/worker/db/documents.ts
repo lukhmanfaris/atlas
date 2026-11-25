@@ -180,6 +180,7 @@ export async function updateDraftHeader(
     issueDate: string;
     validUntil: string | null;
     dueDate: string | null;
+    deliveryDate: string | null;
     notes: string | null;
     terms: string | null;
     discountSen: number;

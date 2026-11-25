@@ -18,8 +18,7 @@ export function renderDeliveryOrder(model: PdfModel) {
     title: "DELIVERY ORDER",
     body: html`${header(model, "DELIVERY ORDER", [
         { label: "DO No.", value: model.number ?? "DRAFT" },
-        { label: "Date", value: formatDate(model.issueDate) },
-        { label: "Delivery Date", value: formatDate(model.deliveryDate) },
+        { label: "Delivery Date", value: formatDate(model.issueDate) },
         { label: "Vehicle No.", value: model.vehicleNo },
         { label: "Driver", value: model.driverName },
       ])}
