@@ -151,6 +151,18 @@ describe("document templates", () => {
     expect(renderDocumentHtml(model({ company })).toString()).not.toContain('class="stamp"');
   });
 
+  it("caps the logo and keeps it inside the header grid", () => {
+    const html = renderDocumentHtml(
+      model({
+        company: { ...COMPANY_SNAPSHOT, logoUrl: "data:image/png;base64,AAAA", stampUrl: null },
+      }),
+    ).toString();
+
+    expect(html).toContain("max-height: 22mm");
+    expect(html).toContain("max-width: 55mm");
+    expect(html).toContain('class="doc-logo"');
+  });
+
   it("prints item details under the description", () => {
     const html = renderDocumentHtml(
       model({

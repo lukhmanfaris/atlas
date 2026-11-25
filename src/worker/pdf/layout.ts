@@ -111,7 +111,7 @@ const STYLES = `
     z-index: 0;
     pointer-events: none;
   }
-  .sheet { position: relative; z-index: 1; min-height: 267mm; display: flex; flex-direction: column; }
+  .sheet { position: relative; z-index: 1; min-height: 258mm; display: flex; flex-direction: column; }
   .bottom { margin-top: auto; }
   .stamp { text-align: right; margin-top: 6mm; }
   .stamp img { width: 57mm; max-height: 57mm; object-fit: contain; }
@@ -126,7 +126,8 @@ const STYLES = `
   .company { grid-column: 1; grid-row: 2; }
   .doc-meta { grid-column: 2; grid-row: 2; }
   .company { max-width: 105mm; }
-  .company img.logo { max-height: 30mm; max-width: 60mm; object-fit: contain; display: block; margin-bottom: 2mm; }
+  .doc-logo img.logo,
+  .company img.logo { max-height: 22mm; max-width: 55mm; width: auto; height: auto; object-fit: contain; display: block; }
   .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
   .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
       .doc-number { font-size: 11pt; font-weight: 600; }
