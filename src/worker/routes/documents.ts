@@ -1,4 +1,4 @@
-import { and, eq, ne, sql } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { Hono, type Context } from "hono";
 import { uuidv7 } from "uuidv7";
 import type { ZodError } from "zod";
@@ -140,6 +140,12 @@ async function detail(c: Context<AppEnv>, documentId: string) {
               eq(documents.sourceDocumentId, documentId),
               eq(documents.type, "delivery_order"),
             ),
+          )
+          // Issued ones oldest first, drafts (no issue time) last.
+          .orderBy(
+            sql`${documents.issuedAt} IS NULL`,
+            asc(documents.issuedAt),
+            asc(documents.createdAt),
           )
       : [];
 

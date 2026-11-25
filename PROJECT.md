@@ -32,7 +32,7 @@ Both environments are live and behind Cloudflare Access with a one-time PIN sent
 - Team domain: `atlas-docs.cloudflareaccess.com`. The zero-trust organisation also hosts unrelated older apps — never touch their Access applications.
 - Database: D1 in `apac`, read replication off. Storage: R2, private buckets, files served only through the Worker after a membership check.
 - PDFs: Cloudflare Browser Run via `@cloudflare/puppeteer`, generated once at issue and stored in R2. `PDF_RENDERING` is **on** in staging/production and **off** locally (there is no Browser Run on a laptop; the call hangs rather than failing).
-- Tests: `npm run check` runs typecheck + lint + `157` unit/API tests; `npm run test:e2e` runs `8` Playwright flows.
+- Tests: `npm run check` runs typecheck + lint + `178` unit/API tests; `npm run test:e2e` runs `8` Playwright flows.
 - Backups: nightly GitHub Action at 02:10 Malaysia time exports production D1 to `atlas-backups-production/backups/YYYY/MM/DD.sql.gz` (Malaysia date), gzip. A 7-year lifecycle rule (2,557 days, prefix `backups/`) deletes older copies. The restore drill has been run once (see `RESTORE.md`).
 
 All sixteen features in `spec.json` are `done`.

@@ -275,6 +275,42 @@ describe("delivery order numbers", () => {
     await expect(issue(companyId, fromDraft, ownerId, "delivery_order")).resolves.toBeNull();
   });
 
+  it("refuses a delivery order whose invoice has been voided", async () => {
+    const { companyId, ownerId } = await setup();
+    const invoice = await issuedInvoice(companyId, ownerId);
+    const delivery = await draftDo(companyId, ownerId, invoice);
+    await createDb(env.DB)
+      .update(documents)
+      .set({ status: "void" })
+      .where(eq(documents.id, invoice));
+
+    await expect(issue(companyId, delivery, ownerId, "delivery_order")).resolves.toBeNull();
+  });
+
+  it("keeps delivery order numbers per invoice within a company", async () => {
+    const { companyId, ownerId } = await setup();
+    const first = await issuedInvoice(companyId, ownerId);
+    const second = await issuedInvoice(companyId, ownerId);
+    const numbers = [];
+    for (const source of [first, first, second]) {
+      const delivery = await draftDo(companyId, ownerId, source);
+      numbers.push((await issue(companyId, delivery, ownerId, "delivery_order"))?.number);
+    }
+    expect(numbers).toEqual(["DO-1000", "DO-1000-2", "DO-1001"]);
+  });
+
+  it("gives two companies the same delivery order number independently", async () => {
+    const a = await setup();
+    const b = await setup();
+    for (const { companyId, ownerId } of [a, b]) {
+      const invoice = await issuedInvoice(companyId, ownerId);
+      const delivery = await draftDo(companyId, ownerId, invoice);
+      await expect(issue(companyId, delivery, ownerId, "delivery_order")).resolves.toMatchObject({
+        number: "DO-1000",
+      });
+    }
+  });
+
   it("uses the delivery order prefix and the invoice seq", async () => {
     const { companyId, ownerId } = await setup();
     await createDb(env.DB)

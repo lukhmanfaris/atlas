@@ -146,6 +146,14 @@ describe("delivery orders", () => {
     expect(((await issuedSecond.json()) as { document: { number: string } }).document.number).toBe(
       "DO-1000-2",
     );
+
+    const invoiceView = (await (
+      await call(`/api/documents/${invoiceId}`, { as: email, companyId })
+    ).json()) as { document: { linkedDeliveryOrders: { number: string }[] } };
+    expect(invoiceView.document.linkedDeliveryOrders.map((d) => d.number)).toEqual([
+      "DO-1000",
+      "DO-1000-2",
+    ]);
   });
 
   it("rejects a quantity above the remainder on save and on issue", async () => {

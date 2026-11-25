@@ -191,7 +191,7 @@ async function issueDeliveryOrderNumber(
            AND EXISTS (
              SELECT 1 FROM documents inv
              WHERE inv.id = documents.source_document_id AND inv.company_id = ?
-               AND inv.type = 'invoice' AND inv.seq IS NOT NULL
+               AND inv.type = 'invoice' AND inv.status = 'issued' AND inv.seq IS NOT NULL
            )`,
       )
       .bind(
