@@ -69,6 +69,10 @@ export async function issueDocumentNumber(
   const prefix = prefixFor(company, type);
   const seqYear = Number(issueDate.slice(0, 4));
 
+  if (type === "delivery_order") {
+    return issueDeliveryOrderNumber(d1, input, prefix, seqYear);
+  }
+
   const [, advance, stamp] = await d1.batch([
     // 1. Make sure the counter row exists, starting at 1000.
     d1
@@ -129,6 +133,84 @@ export async function issueDocumentNumber(
   ]);
 
   if ((advance?.meta.changes ?? 0) === 0 || (stamp?.meta.changes ?? 0) === 0) {
+    return null;
+  }
+
+  const row = await d1
+    .prepare("SELECT number, seq FROM documents WHERE id = ?")
+    .bind(documentId)
+    .first<{ number: string | null; seq: number | null }>();
+
+  if (!row?.number || row.seq === null) {
+    return null;
+  }
+
+  return { number: row.number, seq: row.seq };
+}
+
+/**
+ * A delivery order carries its invoice's digits: invoice seq 1042 gives
+ * DO-1042, then DO-1042-2, DO-1042-3 for further deliveries of that invoice
+ * (voided ones still count). It never touches number_sequences. The count and
+ * the stamp happen in one UPDATE, so concurrent issues cannot share a number
+ * (the unique index on company_id + number is the backstop).
+ */
+async function issueDeliveryOrderNumber(
+  d1: D1Database,
+  input: IssueNumberInput,
+  prefix: string,
+  seqYear: number,
+): Promise<IssueNumberResult | null> {
+  const { companyId, documentId, issuedAt, issuedBy } = input;
+
+  const [stamp] = await d1.batch([
+    d1
+      .prepare(
+        `UPDATE documents
+         SET seq = (
+               SELECT inv.seq FROM documents inv
+               WHERE inv.id = documents.source_document_id AND inv.company_id = ?
+             ),
+             seq_year = ?,
+             number = ? || '-' || printf(
+               '%04d',
+               (SELECT inv.seq FROM documents inv
+                WHERE inv.id = documents.source_document_id AND inv.company_id = ?)
+             ) || (
+               SELECT CASE WHEN COUNT(*) = 0 THEN '' ELSE '-' || (COUNT(*) + 1) END
+               FROM documents o
+               WHERE o.company_id = ? AND o.type = 'delivery_order'
+                 AND o.source_document_id = documents.source_document_id
+                 AND o.number IS NOT NULL
+             ),
+             status = 'issued',
+             issued_at = ?,
+             issued_by = ?,
+             updated_at = ?
+         WHERE id = ? AND company_id = ? AND type = 'delivery_order' AND status = 'draft'
+           AND EXISTS (
+             SELECT 1 FROM documents inv
+             WHERE inv.id = documents.source_document_id AND inv.company_id = ?
+               AND inv.type = 'invoice' AND inv.seq IS NOT NULL
+           )`,
+      )
+      .bind(
+        companyId,
+        seqYear,
+        prefix,
+        companyId,
+        companyId,
+        issuedAt,
+        issuedBy,
+        issuedAt,
+        documentId,
+        companyId,
+        companyId,
+      ),
+    ...(input.extraStatements ?? []),
+  ]);
+
+  if ((stamp?.meta.changes ?? 0) === 0) {
     return null;
   }
 

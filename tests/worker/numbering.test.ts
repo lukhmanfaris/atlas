@@ -37,6 +37,7 @@ async function seedDraft(
   ownerId: string,
   type: DocumentType,
   issueDate = "2026-11-24",
+  sourceDocumentId?: string,
 ): Promise<string> {
   const customerId = await seedCustomer(companyId);
   const id = uuidv7();
@@ -49,6 +50,7 @@ async function seedDraft(
     status: "draft",
     customerId,
     issueDate,
+    sourceDocumentId: sourceDocumentId ?? null,
     createdBy: ownerId,
     createdAt: now,
     updatedAt: now,
@@ -171,7 +173,6 @@ describe("issuing a number", () => {
 
     const invoice = await seedDraft(companyId, ownerId, "invoice");
     const quotation = await seedDraft(companyId, ownerId, "quotation");
-    const delivery = await seedDraft(companyId, ownerId, "delivery_order");
     const otherInvoice = await seedDraft(other.companyId, other.ownerId, "invoice");
 
     await expect(issue(companyId, invoice, ownerId)).resolves.toMatchObject({
@@ -180,9 +181,6 @@ describe("issuing a number", () => {
     await expect(issue(companyId, quotation, ownerId, "quotation")).resolves.toMatchObject({
       number: "QT-1000",
     });
-    await expect(
-      issue(companyId, delivery, ownerId, "delivery_order"),
-    ).resolves.toMatchObject({ number: "DO-1000" });
     await expect(issue(other.companyId, otherInvoice, other.ownerId)).resolves.toMatchObject({
       number: "INV-1000",
     });
@@ -215,5 +213,89 @@ describe("issuing a number", () => {
     await expect(issue(companyId, documentId, ownerId)).resolves.toMatchObject({
       number: "ABC-1000",
     });
+  });
+});
+
+describe("delivery order numbers", () => {
+  async function issuedInvoice(companyId: string, ownerId: string) {
+    const id = await seedDraft(companyId, ownerId, "invoice");
+    await issue(companyId, id, ownerId);
+    return id;
+  }
+
+  function draftDo(companyId: string, ownerId: string, sourceId?: string) {
+    return seedDraft(companyId, ownerId, "delivery_order", "2026-11-24", sourceId);
+  }
+
+  it("takes the invoice digits", async () => {
+    const { companyId, ownerId } = await setup();
+    const invoice = await issuedInvoice(companyId, ownerId);
+    const delivery = await draftDo(companyId, ownerId, invoice);
+
+    await expect(issue(companyId, delivery, ownerId, "delivery_order")).resolves.toEqual({
+      number: "DO-1000",
+      seq: 1000,
+    });
+  });
+
+  it("suffixes later delivery orders for the same invoice", async () => {
+    const { companyId, ownerId } = await setup();
+    const invoice = await issuedInvoice(companyId, ownerId);
+    const results = [];
+    for (let i = 0; i < 3; i++) {
+      const delivery = await draftDo(companyId, ownerId, invoice);
+      results.push(await issue(companyId, delivery, ownerId, "delivery_order"));
+    }
+    expect(results.map((r) => r?.number)).toEqual(["DO-1000", "DO-1000-2", "DO-1000-3"]);
+  });
+
+  it("counts a voided delivery order", async () => {
+    const { companyId, ownerId } = await setup();
+    const invoice = await issuedInvoice(companyId, ownerId);
+    const first = await draftDo(companyId, ownerId, invoice);
+    await issue(companyId, first, ownerId, "delivery_order");
+    await createDb(env.DB)
+      .update(documents)
+      .set({ status: "void" })
+      .where(eq(documents.id, first));
+
+    const second = await draftDo(companyId, ownerId, invoice);
+    await expect(issue(companyId, second, ownerId, "delivery_order")).resolves.toMatchObject({
+      number: "DO-1000-2",
+    });
+  });
+
+  it("refuses a delivery order without an issued invoice", async () => {
+    const { companyId, ownerId } = await setup();
+    const bare = await draftDo(companyId, ownerId);
+    await expect(issue(companyId, bare, ownerId, "delivery_order")).resolves.toBeNull();
+
+    const draftInvoice = await seedDraft(companyId, ownerId, "invoice");
+    const fromDraft = await draftDo(companyId, ownerId, draftInvoice);
+    await expect(issue(companyId, fromDraft, ownerId, "delivery_order")).resolves.toBeNull();
+  });
+
+  it("uses the delivery order prefix and the invoice seq", async () => {
+    const { companyId, ownerId } = await setup();
+    await createDb(env.DB)
+      .update(companies)
+      .set({ prefixInvoice: "ABC", prefixDeliveryOrder: "XDO" })
+      .where(eq(companies.id, companyId));
+    const invoice = await seedDraft(companyId, ownerId, "invoice");
+    await expect(issue(companyId, invoice, ownerId)).resolves.toMatchObject({ number: "ABC-1000" });
+
+    const delivery = await draftDo(companyId, ownerId, invoice);
+    await expect(issue(companyId, delivery, ownerId, "delivery_order")).resolves.toMatchObject({
+      number: "XDO-1000",
+    });
+  });
+
+  it("does not advance a delivery order counter", async () => {
+    const { companyId, ownerId } = await setup();
+    const invoice = await issuedInvoice(companyId, ownerId);
+    const delivery = await draftDo(companyId, ownerId, invoice);
+    await issue(companyId, delivery, ownerId, "delivery_order");
+
+    expect(await nextValue(companyId, "delivery_order")).toBeNull();
   });
 });

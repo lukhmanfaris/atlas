@@ -117,11 +117,14 @@ describe("delivery orders", () => {
     expect(remaining.lines[0]?.remainingMilli).toBe(1500);
     expect(remaining.lines[1]?.remainingMilli).toBe(0);
 
-    await call(`/api/documents/${firstDocument.id}/issue`, {
+    const issuedFirst = await call(`/api/documents/${firstDocument.id}/issue`, {
       as: email,
       companyId,
       method: "POST",
     });
+    expect(((await issuedFirst.json()) as { document: { number: string } }).document.number).toBe(
+      "DO-1000",
+    );
 
     const after = (await (
       await call(`/api/documents/${invoiceId}/delivery-remaining`, { as: email, companyId })
@@ -130,9 +133,19 @@ describe("delivery orders", () => {
 
     const second = await createDeliveryOrder(email, companyId, invoiceId);
     expect(second.status).toBe(201);
-    const secondDocument = ((await second.json()) as { document: { lines: { quantityMilli: number }[] } })
-      .document;
+    const secondDocument = ((await second.json()) as {
+      document: { id: string; lines: { quantityMilli: number }[] };
+    }).document;
     expect(secondDocument.lines.map((line) => line.quantityMilli)).toEqual([1500]);
+
+    const issuedSecond = await call(`/api/documents/${secondDocument.id}/issue`, {
+      as: email,
+      companyId,
+      method: "POST",
+    });
+    expect(((await issuedSecond.json()) as { document: { number: string } }).document.number).toBe(
+      "DO-1000-2",
+    );
   });
 
   it("rejects a quantity above the remainder on save and on issue", async () => {
