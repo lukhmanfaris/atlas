@@ -315,8 +315,9 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
                 </Field>
               </div>
 
-              <Field label="Details" hint="Optional second line printed under the item.">
-                <Input
+              <Field label="Details" hint="Optional. Printed under the item; press Enter for a new line.">
+                <Textarea
+                  rows={3}
                   value={line.details}
                   onChange={(event) => setLine(line.key, { details: event.target.value })}
                 />

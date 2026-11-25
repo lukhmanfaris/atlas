@@ -149,3 +149,25 @@ test("creates and issues an invoice", async ({ page }) => {
   await page.getByRole("button", { name: "Issue" }).click();
   await expect(page.getByText(/INV-\d{4}/)).toBeVisible();
 });
+
+test("keeps line breaks typed into item details", async ({ page }) => {
+  const details = "Short Sleeve S-4XL\nPrinting Method: Silkscreen";
+
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: /New invoice/ }).click();
+
+  await page.getByPlaceholder("Customer name").fill(`E2E Details Buyer ${Date.now()}`);
+  await page.getByLabel("Billing address").fill("3 Test Road\n50000 Kuala Lumpur");
+  await page.getByLabel("Description").first().fill("Cotton Tshirt Printing");
+  await page.getByLabel(/^Details/).first().fill(details);
+  await expect(page.getByLabel(/^Details/).first()).toHaveValue(details);
+  await page.getByLabel("Qty").fill("66");
+  await page.getByLabel("Unit price (RM)").fill("15.00");
+
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page).toHaveURL(/\/invoices\/[0-9a-f-]+$/);
+
+  const documentId = page.url().split("/").pop();
+  const preview = await page.request.get(`/api/documents/${documentId}/preview`);
+  expect(await preview.text()).toContain(`<div class="line-details">${details}</div>`);
+});
