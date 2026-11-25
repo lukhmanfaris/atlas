@@ -273,7 +273,7 @@
         { "name": "issue_date", "type": "text", "required": true },
         { "name": "due_date", "type": "text", "notes": "Invoice only: issue_date + payment terms" },
         { "name": "valid_until", "type": "text", "notes": "Quotation only: issue_date + validity days" },
-        { "name": "delivery_date", "type": "text", "notes": "Delivery order only" },
+        { "name": "delivery_date", "type": "text", "notes": "Delivery order only; kept equal to issue_date, which is the DO's single date" },
         { "name": "delivery_address", "type": "text", "notes": "Delivery order required; invoice optional" },
         { "name": "source_document_id", "type": "text", "references": "documents.id", "notes": "Invoice from quotation; delivery order from invoice" },
         { "name": "notes", "type": "text" },
@@ -439,7 +439,7 @@
     },
     "delivery_order": {
       "title": "DELIVERY ORDER",
-      "meta": ["DO No.", "Date", "Delivery Date", "Invoice No.", "Vehicle No. (optional)", "Driver (optional)"],
+      "meta": ["DO No.", "Delivery Date", "Invoice No.", "Vehicle No. (optional)", "Driver (optional)"],
       "address_blocks": ["Bill To", "Deliver To"],
       "columns": ["No.", "Item Code", "Description", "Qty"],
       "price_rule": "No prices, discounts or totals anywhere on a delivery order",
@@ -658,7 +658,8 @@
         "Delivery orders cannot be created from draft or void invoices.",
         "No prices, discounts or totals appear in delivery order API responses, the DO editor or the DO PDF.",
         "Mark delivered records delivered_at and the optional receiver name.",
-        "Voiding a delivery order returns its quantities to the invoice's remaining amount."
+        "Voiding a delivery order returns its quantities to the invoice's remaining amount.",
+        "A draft delivery order has one date, its Delivery Date: it starts as today, can be set to any day (backdated or ahead) in the DO editor until issue, and prints on the DO PDF as 'Delivery Date'."
       ]
     },
     {
@@ -788,6 +789,7 @@
     { "date": "2026-11-25", "decision": "Document lines carry an optional details line, printed under the item name", "why": "Printing jobs need specifications (colours, stock, sides) without turning the item name into a paragraph. The catalogue item's description fills it automatically" },
     { "date": "2026-11-25", "decision": "PDF layout: Bill To wraps at the page centre, item details keep line breaks, U.Price and Qty are centred, and the paid copy reads 'Total Paid (RM)'", "why": "Owner review of a real invoice: long customer names ran across the page, multi-line specifications were squashed into one paragraph, and a paid copy should say the total was paid. Paid copies already stored keep 'Total (RM)' because stored PDFs are never overwritten" },
     { "date": "2026-11-25", "decision": "Delivery order numbers follow their invoice: DO-1042 for INV-1042, then DO-1042-2, DO-1042-3", "why": "Anyone can pair a DO with its invoice at a glance, which matters because the invoice number was dropped from the DO PDF. DO numbers may therefore have gaps; quotation and invoice numbering is unchanged" },
-    { "date": "2026-11-25", "decision": "One-off clear of test quotations, invoices and delivery orders on production, with their lines, stored PDFs and activity-log rows; counters restart so the next documents are QT-1000 and INV-1000", "why": "Production held only test documents (Waffl Works Services INV-1000 void, INV-1001, DO-1000). This is a one-off exception to 'never reset', allowed only because no real document was issued and the old PDFs are deleted too, so no stored PDF path is reused. Companies, users, members, customers and items are kept" }
+    { "date": "2026-11-25", "decision": "One-off clear of test quotations, invoices and delivery orders on production, with their lines, stored PDFs and activity-log rows; counters restart so the next documents are QT-1000 and INV-1000", "why": "Production held only test documents (Waffl Works Services INV-1000 void, INV-1001, DO-1000). This is a one-off exception to 'never reset', allowed only because no real document was issued and the old PDFs are deleted too, so no stored PDF path is reused. Companies, users, members, customers and items are kept" },
+    { "date": "2026-11-25", "decision": "A delivery order has one date, printed as 'Delivery Date', which staff can change or backdate until the DO is issued", "why": "Paperwork is often entered after the goods went out, so the DO must show the real day. The separate delivery_date only ever repeated the issue date, so the two were merged: issue_date is the single date and delivery_date follows it" }
   ]
 }
