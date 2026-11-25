@@ -172,7 +172,8 @@ const STYLES = `
   .totals .rule { border-top: 0.4mm solid #111827; }
   .totals-line { display: flex; justify-content: space-between; width: 70mm; margin-left: auto; padding: 1.2mm 1.5mm 1.2mm 0; font-size: 10pt; }
   .totals-line.grand { font-weight: 700; }
-  .totals-words { width: 70mm; margin-left: auto; padding: 1.5mm 1.5mm 0 0; text-align: center; font-size: 10pt; }
+  .totals-grand { display: flex; align-items: baseline; gap: 6mm; }
+  .totals-words { flex: 1; min-width: 0; text-align: left; padding: 1.2mm 0; font-size: 10pt; }
   .words { margin-top: 4mm; font-size: 10pt; }
   .words strong { text-transform: uppercase; letter-spacing: 0.04em; }
   section.extra { margin-top: 5mm; page-break-inside: avoid; }
@@ -314,10 +315,10 @@ export function totals(model: PdfModel) {
       ? html`<div class="totals-line"><span>Discount</span><span>${formatMoney(model.discountSen)}</span></div>`
       : ""}
     <div class="rule"></div>
-    <div class="totals-line grand"><span>Total (RM)</span><span>${formatMoney(model.totalSen)}</span></div>
-    ${model.amountInWords
-      ? html`<div class="totals-words">${model.amountInWords}</div>`
-      : ""}
+    <div class="totals-grand">
+      <div class="totals-words">${model.amountInWords ?? ""}</div>
+      <div class="totals-line grand"><span>Total (RM)</span><span>${formatMoney(model.totalSen)}</span></div>
+    </div>
   </div>`;
 }
 
