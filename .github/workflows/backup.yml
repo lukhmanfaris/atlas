@@ -14,6 +14,8 @@ on:
 
 permissions:
   contents: read
+  # Lets the last step re-enable this workflow's own schedule (see below).
+  actions: write
 
 concurrency:
   group: backup
@@ -61,3 +63,12 @@ jobs:
       - name: Remove the plain export
         if: always()
         run: rm -f backup.sql backup.sql.gz
+
+      # The repo is public, and GitHub switches off scheduled workflows in a
+      # public repo after 60 days without commits. Re-enabling it every night
+      # keeps the backup running. It runs even when the backup failed.
+      - name: Keep the nightly schedule switched on
+        if: always()
+        run: gh workflow enable backup.yml --repo "$GITHUB_REPOSITORY"
+        env:
+          GH_TOKEN: ${{ github.token }}
