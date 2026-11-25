@@ -411,7 +411,7 @@
   "pdf_layouts": {
     "common": {
       "page": "A4 portrait, 15 mm margins, 10 pt body text, table header repeats on each page, footer 'Page X of Y'",
-      "header": "Company logo (max 30 mm tall) at top left; company name, registration number, address, phone and email beside it; document title and number block at top right",
+      "header": "Company logo at top left with the company name, registration number and address below it; document title and meta rows aligned to the same top line on the right. The address prints in at most three lines: street lines, then postcode and city, then state. Country is omitted",
       "customer_block": "Customer name, registration number, billing address, contact person and phone",
       "generated_note": "Pinned to the bottom of the last page: 'This is a computer-generated document. No signature is required.' on quotations and invoices",
       "void": "Voided documents get a copy with a diagonal VOID watermark; the original stored PDF is never overwritten"

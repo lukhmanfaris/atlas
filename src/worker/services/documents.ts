@@ -82,6 +82,26 @@ export async function customerSnapshot(
   return liveCustomer(d1, customerId);
 }
 
+
+/**
+ * Documents print the company address in at most three lines:
+ * street lines, then postcode + city, then state. The country is omitted.
+ */
+export function composeAddressLines(row: {
+  address_line1?: string | null;
+  address_line2?: string | null;
+  address_line3?: string | null;
+  postcode?: string | null;
+  city?: string | null;
+  state?: string | null;
+}): string[] {
+  return [
+    [row.address_line1, row.address_line2].filter(Boolean).join(", "),
+    [row.postcode, row.city].filter(Boolean).join(" "),
+    [row.address_line3, row.state].filter(Boolean).join(", "),
+  ].filter((line) => line.length > 0);
+}
+
 async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySnapshot> {
   const row = await d1
     .prepare(
@@ -100,16 +120,14 @@ async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySn
   return {
     name: String(row.name),
     registrationNo: String(row.registration_no),
-    addressLines: [
-      row.address_line1,
-      row.address_line2,
-      row.address_line3,
-      [row.postcode, row.city].filter(Boolean).join(" "),
-      row.state,
-      row.country,
-    ]
-      .filter((value): value is string => Boolean(value))
-      .map(String),
+    addressLines: composeAddressLines({
+      address_line1: row.address_line1 ? String(row.address_line1) : null,
+      address_line2: row.address_line2 ? String(row.address_line2) : null,
+      address_line3: row.address_line3 ? String(row.address_line3) : null,
+      postcode: row.postcode ? String(row.postcode) : null,
+      city: row.city ? String(row.city) : null,
+      state: row.state ? String(row.state) : null,
+    }),
     phone: row.phone ? String(row.phone) : null,
     email: row.email ? String(row.email) : null,
     logoKey: row.logo_r2_key ? String(row.logo_r2_key) : null,
