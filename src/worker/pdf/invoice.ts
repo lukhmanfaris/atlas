@@ -22,7 +22,6 @@ export function renderInvoice(model: PdfModel) {
         { label: "Invoice No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Terms", value: terms },
-        { label: "Due Date", value: formatDate(model.dueDate) },
         { label: "Quotation No.", value: model.sourceNumber },
       ])}
       ${customerBlock(model)}
@@ -31,8 +30,8 @@ export function renderInvoice(model: PdfModel) {
           <tr>
             <th>No.</th>
             <th>Description</th>
-            <th class="qty">Qty</th>
             <th class="price">Unit Price (RM)</th>
+            <th class="qty">Qty</th>
             <th class="num">Amount (RM)</th>
           </tr>
         </thead>

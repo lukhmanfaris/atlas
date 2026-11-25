@@ -122,7 +122,7 @@ const STYLES = `
     align-items: start;
   }
   .doc-logo { grid-column: 1; grid-row: 1; margin-bottom: 2mm; }
-  .doc-title { grid-column: 2; grid-row: 1; margin: 0; font-size: 30pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: right; }
+  .doc-title { grid-column: 2; grid-row: 1; margin: 0; font-size: 25pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: right; }
   .company { grid-column: 1; grid-row: 2; }
   .doc-meta { grid-column: 2; grid-row: 2; }
   .company { max-width: 105mm; }
@@ -142,8 +142,8 @@ const STYLES = `
   table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; table-layout: fixed; }
   table.lines.with-prices th:nth-child(1) { width: 10mm; }
   table.lines.with-prices th:nth-child(2) { width: auto; }
-  table.lines.with-prices th:nth-child(3) { width: 14mm; }
-  table.lines.with-prices th:nth-child(4) { width: 34mm; }
+  table.lines.with-prices th:nth-child(3) { width: 34mm; }
+  table.lines.with-prices th:nth-child(4) { width: 14mm; }
   table.lines.with-prices th:nth-child(5) { width: 32mm; }
   table.lines.no-prices th:nth-child(1) { width: 10mm; }
   table.lines.no-prices th:nth-child(2) { width: 32mm; }
@@ -282,8 +282,8 @@ export function lineRows(model: PdfModel, withPrices: boolean) {
           `<td>${escapeText(line.description)}${
             line.details ? `<div class="line-details">${escapeText(line.details)}</div>` : ""
           }</td>`,
-          `<td class="qty">${formatQty(line.quantityMilli)}</td>`,
           withPrices ? `<td class="price">${formatMoney(line.unitPriceSen ?? 0)}</td>` : "",
+          `<td class="qty">${formatQty(line.quantityMilli)}</td>`,
           withPrices ? `<td class="num">${formatMoney(line.lineTotalSen ?? 0)}</td>` : "",
         ];
         return `<tr>${cells.join("")}</tr>`;
