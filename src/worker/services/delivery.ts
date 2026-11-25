@@ -3,6 +3,7 @@ export type RemainingLine = {
   lineNo: number;
   sku: string | null;
   description: string;
+  details: string | null;
   unit: string;
   invoicedMilli: number;
   deliveredMilli: number;
@@ -14,6 +15,7 @@ type Row = {
   line_no: number;
   sku: string | null;
   description: string;
+  details: string | null;
   unit: string;
   quantity_milli: number;
   delivered_milli: number;
@@ -38,6 +40,7 @@ export async function remainingForInvoice(
               il.line_no,
               il.sku,
               il.description,
+              il.details,
               il.unit,
               il.quantity_milli,
               COALESCE((
@@ -61,6 +64,7 @@ export async function remainingForInvoice(
     lineNo: row.line_no,
     sku: row.sku,
     description: row.description,
+    details: row.details,
     unit: row.unit,
     invoicedMilli: row.quantity_milli,
     deliveredMilli: row.delivered_milli,

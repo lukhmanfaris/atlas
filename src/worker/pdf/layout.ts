@@ -113,6 +113,8 @@ const STYLES = `
   }
   .sheet { position: relative; z-index: 1; min-height: 258mm; display: flex; flex-direction: column; }
   .bottom { margin-top: auto; }
+  .bottom-row { display: flex; align-items: flex-end; gap: 8mm; }
+  .bottom-left { flex: 1; min-width: 0; }
   .stamp { text-align: right; margin-top: 6mm; }
   .stamp img { width: 57mm; max-height: 57mm; object-fit: contain; }
   header.doc-header {
@@ -121,8 +123,8 @@ const STYLES = `
     column-gap: 10mm;
     align-items: start;
   }
-  .doc-logo { grid-column: 1; grid-row: 1; margin-bottom: 2mm; }
-  .doc-title { grid-column: 2; grid-row: 1; margin: 0; font-size: 25pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: right; }
+  .doc-logo { grid-column: 2; grid-row: 1; margin-bottom: 2mm; justify-self: end; }
+  .doc-title { grid-column: 1; grid-row: 1; margin: 0; font-size: 25pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); text-align: left; }
   .company { grid-column: 1; grid-row: 2; }
   .doc-meta { grid-column: 2; grid-row: 2; }
   .company { max-width: 105mm; }
@@ -246,7 +248,6 @@ export function header(
     <div class="company-meta">${[
       model.company.registrationNo,
       ...address,
-      model.company.phone ?? "",
       model.company.email ?? "",
     ]
       .filter(Boolean)

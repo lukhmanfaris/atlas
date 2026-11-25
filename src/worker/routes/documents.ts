@@ -523,6 +523,7 @@ documentRoutes.post("/:documentId/delivery-orders", requireCompany, async (c) =>
     lines: deliverable.map((line) => ({
       sku: line.sku,
       description: line.description,
+      details: line.details,
       unit: line.unit,
       quantityMilli: line.remainingMilli,
       unitPriceSen: 0,
@@ -718,6 +719,7 @@ documentRoutes.post("/:documentId/convert-to-invoice", requireCompany, async (c)
       itemId: line.itemId,
       sku: line.sku,
       description: line.description,
+      details: line.details,
       unit: line.unit,
       quantityMilli: line.quantityMilli,
       unitPriceSen: line.unitPriceSen ?? 0,

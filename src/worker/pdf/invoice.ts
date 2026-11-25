@@ -40,27 +40,31 @@ export function renderInvoice(model: PdfModel) {
       </table>
       ${totals(model)}
       <div class="bottom">
-        ${model.company.bankName ||
-        model.company.bankAccountNo ||
-        model.company.paymentInstructions ||
-        model.notes
-          ? html`<section class="extra">
-              <h2>Notes</h2>
-              <p>${[
-                [model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
-                  .filter(Boolean)
-                  .join("\n"),
-                model.company.paymentInstructions ?? "",
-                model.notes ?? "",
-              ]
-                .filter(Boolean)
-                .join("\n")}</p>
-            </section>`
-          : ""}
         ${model.variant === "draft"
           ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid invoice.</div>`
           : ""}
-        ${stampBlock(model)}
+        <div class="bottom-row">
+          <div class="bottom-left">
+            ${model.company.bankName ||
+            model.company.bankAccountNo ||
+            model.company.paymentInstructions ||
+            model.notes
+              ? html`<section class="extra">
+                  <h2>Notes</h2>
+                  <p>${[
+                    [model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
+                      .filter(Boolean)
+                      .join("\n"),
+                    model.company.paymentInstructions ?? "",
+                    model.notes ?? "",
+                  ]
+                    .filter(Boolean)
+                    .join("\n")}</p>
+                </section>`
+              : ""}
+          </div>
+          <div>${stampBlock(model)}</div>
+        </div>
         <div class="generated">This is a computer-generated document. No signature is required.</div>
       </div>`,
   });
