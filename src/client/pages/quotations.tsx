@@ -25,6 +25,7 @@ import {
 import { formatRinggit } from "@/shared/items";
 
 import { listCustomers, listQuotations } from "../api";
+import { DateField } from "../components/date-field";
 import { useCompany } from "../company";
 
 const STATUSES = [
@@ -158,23 +159,21 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
                 ))}
               </SelectContent>
             </Select>
-            <Input
-              type="date"
-              aria-label="From date"
+            <DateField
               className="w-40"
               value={from}
-              onChange={(event) => {
-                setFrom(event.target.value);
+              placeholder="From"
+              onChange={(value) => {
+                setFrom(value);
                 setPage(1);
               }}
             />
-            <Input
-              type="date"
-              aria-label="To date"
+            <DateField
               className="w-40"
               value={to}
-              onChange={(event) => {
-                setTo(event.target.value);
+              placeholder="To"
+              onChange={(value) => {
+                setTo(value);
                 setPage(1);
               }}
             />

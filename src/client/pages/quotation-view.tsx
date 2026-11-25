@@ -14,7 +14,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/client/components/ui/dialog";
+import { Input } from "@/client/components/ui/input";
 import { Textarea } from "@/client/components/ui/textarea";
+import { DateField } from "../components/date-field";
 import { formatRinggit } from "@/shared/items";
 import { milliToQty } from "@/shared/quantities";
 
@@ -51,6 +53,14 @@ export function QuotationViewPage({
   const queryClient = useQueryClient();
   const [voidOpen, setVoidOpen] = useState(false);
   const [reason, setReason] = useState("");
+  const [paidOpen, setPaidOpen] = useState(false);
+  const [deliveredOpen, setDeliveredOpen] = useState(false);
+  const [receiver, setReceiver] = useState("");
+  const [today] = useState(() =>
+    new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 10),
+  );
+  const [paidOn, setPaidOn] = useState(today);
+  const [deliveredOn, setDeliveredOn] = useState(today);
   const [error, setError] = useState<string | null>(null);
 
   const quotation = useQuery({
@@ -87,7 +97,8 @@ export function QuotationViewPage({
   });
 
   const markDelivered = useMutation({
-    mutationFn: (receivedBy: string) => markDeliveredRequest(company.id, documentId ?? "", receivedBy),
+    mutationFn: (input: { receivedBy?: string; deliveredOn?: string }) =>
+      markDeliveredRequest(company.id, documentId ?? "", input),
     onSuccess: () => refresh(),
     onError: (mutationError: Error) => setError(mutationError.message),
   });
@@ -226,17 +237,11 @@ export function QuotationViewPage({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      if (document.paidAt) {
-                        togglePaid.mutate({ paid: false });
-                        return;
-                      }
-                      const paidOn = window.prompt(
-                        "Paid on (YYYY-MM-DD)",
-                        new Date(Date.now() + 8 * 3_600_000).toISOString().slice(0, 10),
-                      );
-                      if (paidOn) togglePaid.mutate({ paid: true, paidOn });
-                    }}
+                    onClick={() =>
+                      document.paidAt
+                        ? togglePaid.mutate({ paid: false })
+                        : setPaidOpen(true)
+                    }
                   >
                     {document.paidAt ? "Mark unpaid" : "Mark paid"}
                   </Button>
@@ -244,10 +249,7 @@ export function QuotationViewPage({
                 {isDeliveryOrder && document.status === "issued" ? (
                   <Button
                     size="sm"
-                    onClick={() => {
-                      const receivedBy = window.prompt("Received by (optional)") ?? "";
-                      markDelivered.mutate(receivedBy);
-                    }}
+                    onClick={() => setDeliveredOpen(true)}
                   >
                     Mark delivered
                   </Button>
@@ -378,6 +380,62 @@ export function QuotationViewPage({
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </CardContent>
       </Card>
+
+      <Dialog open={paidOpen} onOpenChange={setPaidOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark {document.number} paid</DialogTitle>
+            <DialogDescription>Choose the date the payment arrived.</DialogDescription>
+          </DialogHeader>
+          <DateField value={paidOn} onChange={setPaidOn} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaidOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={!paidOn || togglePaid.isPending}
+              onClick={() =>
+                togglePaid.mutate({ paid: true, paidOn }, { onSuccess: () => setPaidOpen(false) })
+              }
+            >
+              Mark paid
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={deliveredOpen} onOpenChange={setDeliveredOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark {document.number} delivered</DialogTitle>
+            <DialogDescription>Record when it arrived and who signed for it.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3">
+            <DateField value={deliveredOn} onChange={setDeliveredOn} />
+            <Input
+              placeholder="Received by (optional)"
+              value={receiver}
+              onChange={(event) => setReceiver(event.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeliveredOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={markDelivered.isPending}
+              onClick={() =>
+                markDelivered.mutate(
+                  { receivedBy: receiver, deliveredOn },
+                  { onSuccess: () => setDeliveredOpen(false) },
+                )
+              }
+            >
+              Mark delivered
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={voidOpen} onOpenChange={setVoidOpen}>
         <DialogContent>

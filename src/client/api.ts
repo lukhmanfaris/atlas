@@ -274,10 +274,22 @@ export function getDeliveryRemaining(companyId: string, invoiceId: string) {
   }>(`/documents/${invoiceId}/delivery-remaining`, {}, companyId);
 }
 
-export function markDelivered(companyId: string, documentId: string, receivedBy: string) {
+export function markDelivered(
+  companyId: string,
+  documentId: string,
+  input: { receivedBy?: string; deliveredOn?: string },
+) {
   return request<{ document: DocumentDto }>(
     `/documents/${documentId}/mark-delivered`,
-    { method: "POST", body: JSON.stringify({ receivedBy: receivedBy || null }) },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        receivedBy: input.receivedBy || null,
+        ...(input.deliveredOn
+          ? { deliveredAt: Date.parse(`${input.deliveredOn}T00:00:00+08:00`) }
+          : {}),
+      }),
+    },
     companyId,
   );
 }

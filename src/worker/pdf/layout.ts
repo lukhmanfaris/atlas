@@ -118,10 +118,10 @@ const STYLES = `
   header.doc-header { display: flex; justify-content: space-between; gap: 10mm; align-items: flex-start; }
   .company { max-width: 105mm; }
   .company img.logo { max-height: 30mm; max-width: 60mm; object-fit: contain; display: block; margin-bottom: 2mm; }
-  .company-name { font-size: 13pt; font-weight: 700; }
+  .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
   .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
   .doc-title { text-align: right; min-width: 78mm; }
-  .doc-title h1 { margin: 0 0 3mm; font-size: 30pt; letter-spacing: 0.08em; color: var(--brand, #111827); }
+  .doc-title h1 { margin: 0 0 3mm; font-size: 30pt; line-height: 1; letter-spacing: 0.08em; color: var(--brand, #111827); }
   .doc-number { font-size: 11pt; font-weight: 600; }
   .meta-table { margin-top: 6mm; width: 100%; border-collapse: collapse; }
   .meta-table td { padding: 0.6mm 0; vertical-align: top; font-size: 10pt; }

@@ -23,6 +23,7 @@ import {
   listItems,
   updateQuotation,
 } from "../api";
+import { DateField } from "../components/date-field";
 import { Field } from "../components/field";
 import { useCompany } from "../company";
 import type { CreateQuotationInput, UpdateQuotationInput } from "@/shared/documents";
@@ -254,11 +255,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
             </Field>
           ) : null}
           <Field label="Issue date">
-            <Input
-              type="date"
-              value={issueDate}
-              onChange={(event) => setIssueDate(event.target.value)}
-            />
+            <DateField value={issueDate} onChange={setIssueDate} />
           </Field>
           <Field
             label={documentType === "invoice" ? "Due date" : "Valid until"}
@@ -268,11 +265,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
                 : "Leave blank to use the company default."
             }
           >
-            <Input
-              type="date"
-              value={validUntil}
-              onChange={(event) => setValidUntil(event.target.value)}
-            />
+            <DateField value={validUntil} onChange={setValidUntil} placeholder="Company default" />
           </Field>
         </CardContent>
       </Card>
