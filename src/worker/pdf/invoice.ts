@@ -39,22 +39,25 @@ export function renderInvoice(model: PdfModel) {
         </tbody>
       </table>
       ${totals(model)}
-      ${model.amountInWords
-        ? html`<div class="words"><strong>Amount in words:</strong> ${model.amountInWords}</div>`
-        : ""}
-      ${model.notes
-        ? html`<section class="extra"><h2>Notes</h2><p>${model.notes}</p></section>`
-        : ""}
       <div class="bottom">
-        ${model.company.bankName || model.company.bankAccountNo || model.company.paymentInstructions
+        ${model.amountInWords
+          ? html`<div class="words"><strong>Amount in words:</strong> ${model.amountInWords}</div>`
+          : ""}
+        ${model.company.bankName ||
+        model.company.bankAccountNo ||
+        model.company.paymentInstructions ||
+        model.notes
           ? html`<section class="extra">
-              <h2>Payment details</h2>
-              <p>${[model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
+              <h2>Notes</h2>
+              <p>${[
+                [model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
+                  .filter(Boolean)
+                  .join("\n"),
+                model.company.paymentInstructions ?? "",
+                model.notes ?? "",
+              ]
                 .filter(Boolean)
                 .join("\n")}</p>
-              ${model.company.paymentInstructions
-                ? html`<p>${model.company.paymentInstructions}</p>`
-                : ""}
             </section>`
           : ""}
         ${model.variant === "draft"

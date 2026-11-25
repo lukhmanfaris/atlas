@@ -124,7 +124,7 @@ describe("document templates", () => {
       }),
     ).toString();
 
-    expect(html).toContain("Payment details");
+    expect(html).toContain("Notes");
     expect(html).toContain("DuitNow to 5140 1234 5678");
   });
 

@@ -168,11 +168,10 @@ const STYLES = `
   table.lines th.qty { text-align: left; }
   .price { text-align: left; white-space: nowrap; }
   .qty { text-align: left; white-space: nowrap; }
-  .totals { margin-top: 5mm; margin-left: auto; width: 70mm; padding-right: 1.5mm; }
-  .totals table { width: 100%; border-collapse: collapse; }
-  .totals td { padding: 1.2mm 0; font-size: 10pt; }
-  .totals td.amount { text-align: right; white-space: nowrap; }
-  .totals tr.grand td { border-top: 0.4mm solid #111827; font-weight: 700; font-size: 10pt; padding-top: 2mm; }
+  .totals { margin-top: 6mm; width: 100%; }
+  .totals .rule { border-top: 0.4mm solid #111827; }
+  .totals-line { display: flex; justify-content: space-between; width: 70mm; margin-left: auto; padding: 1.2mm 1.5mm 1.2mm 0; font-size: 10pt; }
+  .totals-line.grand { font-weight: 700; }
   .words { margin-top: 4mm; font-size: 10pt; }
   .words strong { text-transform: uppercase; letter-spacing: 0.04em; }
   section.extra { margin-top: 5mm; page-break-inside: avoid; }
@@ -308,12 +307,13 @@ export function stampBlock(model: PdfModel) {
 
 export function totals(model: PdfModel) {
   return html`<div class="totals">
-    <table>
-      <tr><td>Subtotal</td><td class="amount">${formatMoney(model.subtotalSen)}</td></tr>
-      ${model.discountSen ? html`<tr><td>Discount</td><td class="amount">${formatMoney(model.discountSen)}</td></tr>` : ""}
-      ${model.taxSen ? html`<tr><td>Tax</td><td class="amount">${formatMoney(model.taxSen)}</td></tr>` : ""}
-      <tr class="grand"><td>Total (RM)</td><td class="amount">${formatMoney(model.totalSen)}</td></tr>
-    </table>
+    <div class="rule"></div>
+    <div class="totals-line"><span>Subtotal</span><span>${formatMoney(model.subtotalSen)}</span></div>
+    ${model.discountSen
+      ? html`<div class="totals-line"><span>Discount</span><span>${formatMoney(model.discountSen)}</span></div>`
+      : ""}
+    <div class="rule"></div>
+    <div class="totals-line grand"><span>Total (RM)</span><span>${formatMoney(model.totalSen)}</span></div>
   </div>`;
 }
 
