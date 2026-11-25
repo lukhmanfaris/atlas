@@ -6,7 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import { createDb } from "@/worker/db/client";
 import { customers, documents } from "@/worker/db/schema";
 import { renderDocumentHtml, type PdfModel } from "@/worker/pdf";
-import { ensureStoredPdf, ensureVoidPdf, renderUnstoredPdf } from "@/worker/services/pdf";
+import {
+  ensurePaidPdf,
+  ensureStoredPdf,
+  ensureVoidPdf,
+  renderUnstoredPdf,
+} from "@/worker/services/pdf";
 
 import { seedCompany, seedUser, uniqueEmail } from "./helpers";
 
@@ -23,6 +28,7 @@ const COMPANY_SNAPSHOT = {
   bankAccountNo: "5140 1234 5678",
   sstRegistered: false,
   paymentInstructions: null,
+  stampKey: null,
 };
 
 const CUSTOMER_SNAPSHOT = {
@@ -120,6 +126,29 @@ describe("document templates", () => {
 
     expect(html).toContain("Payment details");
     expect(html).toContain("DuitNow to 5140 1234 5678");
+  });
+
+  it("drops the Unit and Discount columns", () => {
+    const invoice = renderDocumentHtml(model()).toString();
+    expect(invoice).not.toContain("Discount (RM)");
+    expect(invoice).not.toContain("<th>Unit</th>");
+
+    const delivery = renderDocumentHtml(model({ type: "delivery_order" })).toString();
+    expect(delivery).not.toContain("<th>Unit</th>");
+  });
+
+  it("prints the company stamp on paid invoices and on delivery orders", () => {
+    const company = {
+      ...COMPANY_SNAPSHOT,
+      logoUrl: null,
+      stampUrl: "data:image/png;base64,AAAA",
+    };
+
+    expect(renderDocumentHtml(model({ company, paid: true })).toString()).toContain('class="stamp"');
+    expect(
+      renderDocumentHtml(model({ company, type: "delivery_order" })).toString(),
+    ).toContain('class="stamp"');
+    expect(renderDocumentHtml(model({ company })).toString()).not.toContain('class="stamp"');
   });
 
   it("watermarks a void copy", () => {
@@ -275,6 +304,30 @@ describe("PDF storage", () => {
 
     const stillThere = await env.FILES.get(`${companyId}/invoice/2026/INV-1000.pdf`);
     expect(await stillThere?.arrayBuffer()).toEqual(originalBody);
+  });
+
+  it("stores a paid copy without touching the issued file", async () => {
+    const { companyId, documentId, db } = await seedDocument({
+      status: "issued",
+      number: "INV-1002",
+    });
+    const render = vi.fn(async () => new Uint8Array([7]));
+    const deps = { d1: env.DB, r2: env.FILES, render };
+
+    await ensureStoredPdf(deps, { companyId, documentId });
+    const original = await env.FILES.get(`${companyId}/invoice/2026/INV-1002.pdf`);
+    const before = await original?.arrayBuffer();
+
+    await db.update(documents).set({ paidAt: Date.now() }).where(eq(documents.id, documentId));
+
+    const paid = await ensurePaidPdf(deps, { companyId, documentId });
+    expect(paid).toEqual({
+      key: `${companyId}/invoice/2026/INV-1002-paid.pdf`,
+      created: true,
+    });
+
+    const still = await env.FILES.get(`${companyId}/invoice/2026/INV-1002.pdf`);
+    expect(await still?.arrayBuffer()).toEqual(before);
   });
 
   it("fails loudly without recording a PDF when Browser Run fails", async () => {

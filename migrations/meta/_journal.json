@@ -36,6 +36,13 @@
       "when": 1795537943885,
       "tag": "0004_curly_nebula",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1795579886233,
+      "tag": "0005_cheerful_snowbird",
+      "breakpoints": true
     }
   ]
 }

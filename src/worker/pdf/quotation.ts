@@ -28,9 +28,7 @@ export function renderQuotation(model: PdfModel) {
             <th>No.</th>
             <th>Description</th>
             <th class="qty">Qty</th>
-            <th>Unit</th>
             <th class="num">Unit Price (RM)</th>
-            <th class="num">Discount (RM)</th>
             <th class="num">Amount (RM)</th>
           </tr>
         </thead>
@@ -48,10 +46,12 @@ export function renderQuotation(model: PdfModel) {
       ${model.variant === "draft"
         ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid quotation.</div>`
         : ""}
-      <div class="signatures">
-        <div>Issued by: name, signature and date</div>
-        <div>Accepted by: name, signature, company stamp and date</div>
-      </div>
-      <div class="generated">This is a computer-generated document. No signature is required.</div>`,
+      <div class="bottom">
+        <div class="signatures">
+          <div>Issued by: name, signature and date</div>
+          <div>Accepted by: name, signature, company stamp and date</div>
+        </div>
+        <div class="generated">This is a computer-generated document. No signature is required.</div>
+      </div>`,
   });
 }

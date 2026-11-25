@@ -2,6 +2,7 @@ import { html } from "hono/html";
 
 import {
   customerBlock,
+  stampBlock,
   documentShell,
   formatDate,
   header,
@@ -33,9 +34,7 @@ export function renderInvoice(model: PdfModel) {
             <th>No.</th>
             <th>Description</th>
             <th class="qty">Qty</th>
-            <th>Unit</th>
             <th class="num">Unit Price (RM)</th>
-            <th class="num">Discount (RM)</th>
             <th class="num">Amount (RM)</th>
           </tr>
         </thead>
@@ -61,10 +60,13 @@ export function renderInvoice(model: PdfModel) {
       ${model.notes
         ? html`<section class="extra"><h2>Notes</h2><p>${model.notes}</p></section>`
         : ""}
-      ${model.variant === "draft"
-        ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid invoice.</div>`
-        : ""}
-      <div class="generated">This is a computer-generated document. No signature is required.</div>`,
+      <div class="bottom">
+        ${model.variant === "draft"
+          ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid invoice.</div>`
+          : ""}
+        ${stampBlock(model)}
+        <div class="generated">This is a computer-generated document. No signature is required.</div>
+      </div>`,
   });
 }
 

@@ -345,3 +345,16 @@ export function listAuditLog(companyId: string, page = 1) {
     companyId,
   );
 }
+
+export function uploadStamp(companyId: string, file: File) {
+  const form = new FormData();
+  form.append("stamp", file);
+  return request<{ company: CompanyDto }>(`/companies/${companyId}/stamp`, {
+    method: "PUT",
+    body: form,
+  });
+}
+
+export function stampUrl(companyId: string, version: number) {
+  return `${BASE}/companies/${companyId}/stamp?v=${version}`;
+}

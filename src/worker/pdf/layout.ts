@@ -9,6 +9,7 @@ export type PdfCompany = {
   phone?: string | null;
   email?: string | null;
   logoUrl?: string | null;
+  stampUrl?: string | null;
   brandColor: string;
   bankName?: string | null;
   bankAccountName?: string | null;
@@ -38,6 +39,7 @@ export type PdfLine = {
 
 export type PdfModel = {
   variant: PdfVariant;
+  paid?: boolean;
   type: "quotation" | "invoice" | "delivery_order";
   number: string | null;
   issueDate: string;
@@ -108,7 +110,10 @@ const STYLES = `
     z-index: 0;
     pointer-events: none;
   }
-  .sheet { position: relative; z-index: 1; }
+  .sheet { position: relative; z-index: 1; min-height: 252mm; display: flex; flex-direction: column; }
+  .bottom { margin-top: auto; }
+  .stamp { text-align: right; margin-top: 6mm; }
+  .stamp img { width: 38mm; max-height: 38mm; object-fit: contain; }
   header.doc-header { display: flex; justify-content: space-between; gap: 10mm; align-items: flex-start; }
   .company { max-width: 105mm; }
   .company img.logo { max-height: 30mm; max-width: 60mm; object-fit: contain; display: block; margin-bottom: 2mm; }
@@ -243,15 +248,24 @@ export function lineRows(model: PdfModel, withPrices: boolean) {
           withPrices ? "" : `<td>${escapeText(line.sku ?? "")}</td>`,
           `<td>${escapeText(line.description)}</td>`,
           `<td class="qty">${formatQty(line.quantityMilli)}</td>`,
-          `<td>${escapeText(line.unit)}</td>`,
           withPrices ? `<td class="num">${formatMoney(line.unitPriceSen ?? 0)}</td>` : "",
-          withPrices ? `<td class="num">${formatMoney(line.discountSen ?? 0)}</td>` : "",
           withPrices ? `<td class="num">${formatMoney(line.lineTotalSen ?? 0)}</td>` : "",
         ];
         return `<tr>${cells.join("")}</tr>`;
       })
       .join(""),
   );
+}
+
+/** The company stamp: always on delivery orders, on invoices only once paid. */
+export function stampBlock(model: PdfModel) {
+  if (!model.company.stampUrl) {
+    return "";
+  }
+  if (model.type !== "delivery_order" && !model.paid) {
+    return "";
+  }
+  return html`<div class="stamp"><img src="${model.company.stampUrl}" alt="" /></div>`;
 }
 
 export function totals(model: PdfModel) {

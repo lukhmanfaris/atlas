@@ -1,6 +1,14 @@
 import { html } from "hono/html";
 
-import { documentShell, formatDate, header, lineRows, metaTable, type PdfModel } from "./layout";
+import {
+  documentShell,
+  formatDate,
+  header,
+  lineRows,
+  metaTable,
+  stampBlock,
+  type PdfModel,
+} from "./layout";
 
 /** Delivery orders never show prices, discounts or totals (spec.json -> pdf_layouts.delivery_order). */
 export function renderDeliveryOrder(model: PdfModel) {
@@ -39,7 +47,6 @@ export function renderDeliveryOrder(model: PdfModel) {
             <th>Item Code</th>
             <th>Description</th>
             <th class="qty">Qty</th>
-            <th>Unit</th>
           </tr>
         </thead>
         <tbody>
@@ -49,12 +56,15 @@ export function renderDeliveryOrder(model: PdfModel) {
       ${model.notes
         ? html`<section class="extra"><h2>Notes</h2><p>${model.notes}</p></section>`
         : ""}
-      ${model.variant === "draft"
-        ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid delivery order.</div>`
-        : ""}
-      <div class="signatures">
-        <div>Issued by: name, signature and date</div>
-        <div>Received in good order and condition by: name, signature, company stamp and date</div>
+      <div class="bottom">
+        ${model.variant === "draft"
+          ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid delivery order.</div>`
+          : ""}
+        ${stampBlock(model)}
+        <div class="signatures">
+          <div>Issued by: name, signature and date</div>
+          <div>Received in good order and condition by: name, signature and date</div>
+        </div>
       </div>`,
   });
 }

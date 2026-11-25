@@ -9,6 +9,7 @@ import { apiError } from "@/worker/errors";
 import { renderDocumentHtml } from "@/worker/pdf";
 import { loadDocument } from "@/worker/services/documents";
 import {
+  ensurePaidPdf,
   ensureStoredPdf,
   ensureVoidPdf,
   puppeteerRenderer,
@@ -91,7 +92,9 @@ documentPdfRoutes.get("/:documentId/pdf", async (c) => {
     const stored =
       loaded.row.status === "void"
         ? await ensureVoidPdf(pdfDeps, { companyId, documentId })
-        : await ensureStoredPdf(pdfDeps, { companyId, documentId });
+        : loaded.row.status === "issued" && loaded.row.paid_at !== null
+          ? await ensurePaidPdf(pdfDeps, { companyId, documentId })
+          : await ensureStoredPdf(pdfDeps, { companyId, documentId });
 
     if (!stored) {
       return apiError(c, 404, "not_found", "Document not found.");

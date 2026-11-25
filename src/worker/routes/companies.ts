@@ -195,3 +195,74 @@ companyRoutes.get("/:companyId/logo", requireCompanyParam, async (c) => {
     },
   });
 });
+
+companyRoutes.put("/:companyId/stamp", requireCompanyParam, requireOwner, async (c) => {
+  let body: Record<string, unknown>;
+  try {
+    body = await c.req.parseBody();
+  } catch {
+    return apiError(c, 400, "validation_error", "Send the stamp as a file upload.");
+  }
+
+  const file = body["stamp"];
+  if (!(file instanceof File)) {
+    return apiError(c, 400, "validation_error", "Attach the stamp in a field named stamp.");
+  }
+  if (file.size > MAX_LOGO_BYTES) {
+    return apiError(c, 400, "validation_error", "The stamp must be 1 MB or smaller.");
+  }
+  if (file.type.toLowerCase() !== "image/png") {
+    return apiError(c, 400, "validation_error", "The stamp must be a PNG with a transparent background.");
+  }
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  if (!(bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)) {
+    return apiError(c, 400, "validation_error", "That file is not a PNG image.");
+  }
+
+  const companyId = c.get("company").id;
+  const key = `${companyId}/stamp.png`;
+
+  await c.env.FILES.put(key, bytes, { httpMetadata: { contentType: "image/png" } });
+
+  const db = createDb(c.env.DB);
+  await db.batch([
+    db
+      .update(companies)
+      .set({ stampR2Key: key, updatedAt: Date.now() })
+      .where(eq(companies.id, companyId)),
+    db.insert(auditLog).values(
+      auditValues({
+        companyId,
+        userId: c.get("user").id,
+        action: "company.stamp",
+        entity: "company",
+        entityId: companyId,
+        detail: { bytes: bytes.byteLength },
+      }),
+    ),
+  ]);
+
+  const company = await findCompany(db, companyId);
+  if (!company) {
+    return apiError(c, 500, "internal_error", "The company could not be read back.");
+  }
+  return c.json({ company: toDto(company) });
+});
+
+companyRoutes.get("/:companyId/stamp", requireCompanyParam, async (c) => {
+  const company = await findCompany(createDb(c.env.DB), c.get("company").id);
+  if (!company?.stampR2Key) {
+    return apiError(c, 404, "not_found", "This company has no stamp.");
+  }
+  const object = await c.env.FILES.get(company.stampR2Key);
+  if (!object) {
+    return apiError(c, 404, "not_found", "This company has no stamp.");
+  }
+  return new Response(object.body, {
+    headers: {
+      "content-type": object.httpMetadata?.contentType ?? "image/png",
+      "cache-control": "private, max-age=60",
+    },
+  });
+});

@@ -75,6 +75,7 @@ export type CompanyDto = {
   email: string | null;
   website: string | null;
   logoR2Key: string | null;
+  stampR2Key: string | null;
   brandColor: string;
   bankName: string | null;
   bankAccountName: string | null;

@@ -19,6 +19,10 @@ export function voidPdfKey(companyId: string, type: string, year: number, number
   return `${companyId}/${type}/${year}/${number}-void.pdf`;
 }
 
+export function paidPdfKey(companyId: string, type: string, year: number, number: string): string {
+  return `${companyId}/${type}/${year}/${number}-paid.pdf`;
+}
+
 export async function sha256Hex(bytes: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest))
@@ -108,6 +112,48 @@ export async function ensureVoidPdf(
   await deps.d1
     .prepare(
       "UPDATE documents SET void_pdf_r2_key = ?, updated_at = ? WHERE id = ? AND company_id = ?",
+    )
+    .bind(key, Date.now(), input.documentId, input.companyId)
+    .run();
+
+  return { key, created: true };
+}
+
+/**
+ * A separate copy carrying the company stamp, generated when an invoice is
+ * marked paid. The issued PDF is never touched.
+ */
+export async function ensurePaidPdf(
+  deps: PdfDeps,
+  input: { companyId: string; documentId: string },
+): Promise<{ key: string; created: boolean } | null> {
+  const loaded = await loadDocument(deps.d1, deps.r2, input.companyId, input.documentId);
+  if (!loaded) {
+    return null;
+  }
+
+  const { row, model } = loaded;
+  const number = row.number;
+  if (!number || row.status === "void" || row.status === "draft" || row.paid_at === null) {
+    return null;
+  }
+  if (row.paid_pdf_r2_key) {
+    return { key: row.paid_pdf_r2_key, created: false };
+  }
+
+  const bytes = await deps.render(renderDocumentHtml({ ...model, paid: true }).toString());
+  const year = Number(row.issue_date.slice(0, 4));
+  const key = paidPdfKey(input.companyId, row.type, year, number);
+  const sha256 = await sha256Hex(bytes);
+
+  await deps.r2.put(key, bytes, {
+    httpMetadata: { contentType: "application/pdf" },
+    customMetadata: { sha256 },
+  });
+
+  await deps.d1
+    .prepare(
+      "UPDATE documents SET paid_pdf_r2_key = ?, updated_at = ? WHERE id = ? AND company_id = ?",
     )
     .bind(key, Date.now(), input.documentId, input.companyId)
     .run();

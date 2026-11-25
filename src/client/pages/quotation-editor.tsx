@@ -38,7 +38,6 @@ type LineState = {
   unit: string;
   quantity: string;
   price: string;
-  discount: string;
 };
 
 function emptyLine(): LineState {
@@ -50,7 +49,6 @@ function emptyLine(): LineState {
     unit: "pcs",
     quantity: "1",
     price: "0.00",
-    discount: "0.00",
   };
 }
 
@@ -108,7 +106,6 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
         unit: line.unit,
         quantity: milliToQty(line.quantityMilli),
         price: senToRinggit(line.unitPriceSen ?? 0),
-        discount: senToRinggit(line.discountSen),
       })),
     );
   }, [existing.data, customers.data]);
@@ -117,7 +114,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
     const mapped = lines.map((line) => ({
       quantityMilli: qtyToMilli(line.quantity) ?? 0,
       unitPriceSen: ringgitToSen(line.price) ?? 0,
-      discountSen: ringgitToSen(line.discount) ?? 0,
+      discountSen: 0,
     }));
     return computeTotals(mapped, ringgitToSen(discount) ?? 0, 0);
   }, [lines, discount]);
@@ -131,11 +128,9 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
       const payloadLines = lines.map((line) => {
         const quantityMilli = qtyToMilli(line.quantity);
         const unitPriceSen = ringgitToSen(line.price);
-        const discountSen = ringgitToSen(line.discount);
         if (!line.description.trim()) throw new Error("Every line needs a description.");
         if (quantityMilli === null) throw new Error(`Check the quantity on "${line.description}".`);
         if (unitPriceSen === null) throw new Error(`Check the price on "${line.description}".`);
-        if (discountSen === null) throw new Error(`Check the discount on "${line.description}".`);
 
         return {
           itemId: line.itemId === "NONE" ? null : line.itemId,
@@ -144,7 +139,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
           unit: line.unit,
           quantityMilli,
           unitPriceSen,
-          discountSen,
+          discountSen: 0,
         };
       });
 
@@ -322,7 +317,7 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
                 </Field>
               </div>
 
-              <div className="grid gap-3 sm:grid-cols-5">
+              <div className="grid gap-3 sm:grid-cols-4">
                 <Field label="Qty">
                   <Input
                     value={line.quantity}
@@ -341,19 +336,13 @@ export function QuotationEditorPage({ documentType = "quotation" }: { documentTy
                     onChange={(event) => setLine(line.key, { price: event.target.value })}
                   />
                 </Field>
-                <Field label="Discount (RM)">
-                  <Input
-                    value={line.discount}
-                    onChange={(event) => setLine(line.key, { discount: event.target.value })}
-                  />
-                </Field>
                 <div className="flex items-end justify-between gap-2">
                   <div className="text-sm">
                     <span className="block text-xs text-muted-foreground">Amount</span>
                     <span className="tabular-nums">
                       {formatRinggit(
                         (qtyToMilli(line.quantity) ?? 0) * (ringgitToSen(line.price) ?? 0) / 1000 -
-                          (ringgitToSen(line.discount) ?? 0),
+                          0,
                       )}
                     </span>
                   </div>

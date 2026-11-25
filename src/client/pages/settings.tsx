@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 
 import type { CompanyDto, UpdateCompanyInput } from "@/shared/companies";
 
-import { getCompany, logoUrl, updateCompany, uploadLogo } from "../api";
+import { getCompany, logoUrl, stampUrl, updateCompany, uploadLogo, uploadStamp } from "../api";
 import { Field, inputClass } from "../components/field";
 import { SettingsTabs } from "../components/settings-tabs";
 import { useCompany } from "../company";
@@ -77,6 +77,13 @@ export function SettingsPage() {
     onSuccess: async () => {
       await detail.refetch();
       await reload();
+    },
+  });
+
+  const stamp = useMutation({
+    mutationFn: (file: File) => uploadStamp(company.id, file),
+    onSuccess: async () => {
+      await detail.refetch();
     },
   });
 
@@ -180,6 +187,43 @@ export function SettingsPage() {
         </div>
         <p className="text-xs text-slate-500">PNG or JPEG, up to 1 MB. Shown at most 30 mm tall on PDFs.</p>
         {logo.isError ? <p className="text-sm text-red-700">{logo.error.message}</p> : null}
+      </section>
+
+      <section className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+          Company stamp
+        </h2>
+        <div className="flex flex-wrap items-center gap-4">
+          {detail.data?.company.stampR2Key ? (
+            <img
+              src={stampUrl(company.id, Date.now())}
+              alt="Company stamp"
+              className="h-20 w-auto rounded border border-slate-200 bg-white object-contain p-1"
+            />
+          ) : (
+            <span className="text-sm text-slate-500">No stamp yet.</span>
+          )}
+          {canEdit ? (
+            <label className="cursor-pointer rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-900">
+              Upload PNG stamp
+              <input
+                type="file"
+                accept="image/png"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) stamp.mutate(file);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          ) : null}
+        </div>
+        <p className="text-xs text-slate-500">
+          PNG with a transparent background, up to 1 MB. Printed on delivery orders, and on invoices
+          once they are marked paid.
+        </p>
+        {stamp.isError ? <p className="text-sm text-red-700">{stamp.error.message}</p> : null}
       </section>
 
       <section className="grid gap-4 rounded-lg border border-slate-200 bg-white p-4 sm:grid-cols-2">

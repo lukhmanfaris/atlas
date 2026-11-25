@@ -35,7 +35,12 @@ import { findOverDelivery, remainingForInvoice } from "@/worker/services/deliver
 import { addDays, todayInMalaysia } from "@/worker/services/dates";
 import { companySnapshot, customerSnapshot } from "@/worker/services/documents";
 import { issueDocumentNumber } from "@/worker/services/numbering";
-import { ensureStoredPdf, ensureVoidPdf, puppeteerRenderer } from "@/worker/services/pdf";
+import {
+  ensurePaidPdf,
+  ensureStoredPdf,
+  ensureVoidPdf,
+  puppeteerRenderer,
+} from "@/worker/services/pdf";
 import { computeTotals } from "@/worker/services/totals";
 
 export const documentRoutes = new Hono<AppEnv>();
@@ -575,6 +580,23 @@ documentRoutes.post("/:documentId/mark-paid", requireCompany, async (c) => {
       at,
     }),
   ]);
+
+  if (parsed.data.paid) {
+    try {
+      if ((c.env.PDF_RENDERING as string) === "off") {
+        throw new Error("PDF rendering is switched off");
+      }
+      await ensurePaidPdf(
+        { d1: c.env.DB, r2: c.env.FILES, render: puppeteerRenderer(c.env) },
+        { companyId, documentId },
+      );
+    } catch (error) {
+      console.error("PAID PDF generation deferred", {
+        documentId,
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
 
   const body = await detail(c, documentId);
   return c.json({ document: body });

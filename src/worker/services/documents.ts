@@ -7,6 +7,7 @@ export type CompanySnapshot = {
   phone: string | null;
   email: string | null;
   logoKey: string | null;
+  stampKey: string | null;
   brandColor: string;
   bankName: string | null;
   bankAccountName: string | null;
@@ -48,6 +49,8 @@ type DocumentRow = {
   company_snapshot: string | null;
   source_document_id: string | null;
   pdf_r2_key: string | null;
+  paid_pdf_r2_key: string | null;
+  paid_at: number | null;
   void_pdf_r2_key: string | null;
 };
 
@@ -82,7 +85,7 @@ async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySn
   const row = await d1
     .prepare(
       `SELECT name, registration_no, address_line1, address_line2, address_line3, postcode,
-              city, state, country, phone, email, logo_r2_key, brand_color, bank_name,
+              city, state, country, phone, email, logo_r2_key, stamp_r2_key, brand_color, bank_name,
               bank_account_name, bank_account_no, payment_instructions, sst_registered
        FROM companies WHERE id = ?`,
     )
@@ -109,6 +112,7 @@ async function liveCompany(d1: D1Database, companyId: string): Promise<CompanySn
     phone: row.phone ? String(row.phone) : null,
     email: row.email ? String(row.email) : null,
     logoKey: row.logo_r2_key ? String(row.logo_r2_key) : null,
+    stampKey: row.stamp_r2_key ? String(row.stamp_r2_key) : null,
     brandColor: String(row.brand_color),
     bankName: row.bank_name ? String(row.bank_name) : null,
     bankAccountName: row.bank_account_name ? String(row.bank_account_name) : null,
@@ -225,10 +229,12 @@ export async function loadDocument(
   const pdfCompany: PdfCompany = {
     ...company,
     logoUrl: await logoDataUri(r2, company.logoKey),
+    stampUrl: await logoDataUri(r2, company.stampKey),
   };
 
   const model: PdfModel = {
     variant: variantFor(row.status),
+    paid: row.paid_at !== null,
     type: row.type,
     number: row.number,
     issueDate: row.issue_date,
