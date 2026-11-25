@@ -113,51 +113,52 @@ const STYLES = `
   .sheet { position: relative; z-index: 1; min-height: 252mm; display: flex; flex-direction: column; }
   .bottom { margin-top: auto; }
   .stamp { text-align: right; margin-top: 6mm; }
-  .stamp img { width: 38mm; max-height: 38mm; object-fit: contain; }
+  .stamp img { width: 57mm; max-height: 57mm; object-fit: contain; }
   header.doc-header { display: flex; justify-content: space-between; gap: 10mm; align-items: flex-start; }
   .company { max-width: 105mm; }
   .company img.logo { max-height: 30mm; max-width: 60mm; object-fit: contain; display: block; margin-bottom: 2mm; }
   .company-name { font-size: 13pt; font-weight: 700; }
-  .company-meta { font-size: 8.5pt; color: #4b5563; white-space: pre-line; }
-  .doc-title { text-align: right; min-width: 60mm; }
-  .doc-title h1 { margin: 0 0 1mm; font-size: 20pt; letter-spacing: 0.08em; color: var(--brand, #111827); }
+  .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
+  .doc-title { text-align: right; min-width: 78mm; }
+  .doc-title h1 { margin: 0 0 2mm; font-size: 18pt; letter-spacing: 0.08em; color: var(--brand, #111827); }
   .doc-number { font-size: 11pt; font-weight: 600; }
   .meta-table { margin-top: 6mm; width: 100%; border-collapse: collapse; }
-  .meta-table td { padding: 1mm 0; vertical-align: top; font-size: 9pt; }
-  .meta-table td.label { color: #6b7280; width: 28mm; }
+  .meta-table td { padding: 1mm 0; vertical-align: top; font-size: 10pt; }
+  .meta-table td.label { color: #6b7280; padding-right: 4mm; text-align: right; }
+  .meta-table td.value { text-align: right; }
   .customer-block { margin-top: 6mm; display: flex; gap: 8mm; }
   .customer-block > div { flex: 1; }
-  .block-title { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 1mm; }
+  .block-title { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 1mm; }
   .address { white-space: pre-line; }
   table.lines { width: 100%; border-collapse: collapse; margin-top: 6mm; }
   table.lines thead { display: table-header-group; }
   table.lines tr { page-break-inside: avoid; }
   table.lines th {
     text-align: left;
-    font-size: 8.5pt;
+    font-size: 10pt;
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: #374151;
     border-bottom: 0.4mm solid #111827;
     padding: 2mm 1.5mm;
   }
-  table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: top; font-size: 9.5pt; }
+  table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: top; font-size: 10pt; }
   .num { text-align: right; white-space: nowrap; }
   .qty { text-align: right; white-space: nowrap; }
   .totals { margin-top: 5mm; margin-left: auto; width: 70mm; }
   .totals table { width: 100%; border-collapse: collapse; }
-  .totals td { padding: 1.2mm 0; font-size: 9.5pt; }
+  .totals td { padding: 1.2mm 0; font-size: 10pt; }
   .totals td.amount { text-align: right; white-space: nowrap; }
-  .totals tr.grand td { border-top: 0.4mm solid #111827; font-weight: 700; font-size: 11pt; padding-top: 2mm; }
-  .words { margin-top: 4mm; font-size: 8.5pt; }
+  .totals tr.grand td { border-top: 0.4mm solid #111827; font-weight: 700; font-size: 10pt; padding-top: 2mm; }
+  .words { margin-top: 4mm; font-size: 10pt; }
   .words strong { text-transform: uppercase; letter-spacing: 0.04em; }
   section.extra { margin-top: 5mm; page-break-inside: avoid; }
-  section.extra h2 { font-size: 8pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin: 0 0 1mm; }
-  section.extra p { margin: 0; white-space: pre-line; font-size: 9pt; }
+  section.extra h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin: 0 0 1mm; }
+  section.extra p { margin: 0; white-space: pre-line; font-size: 10pt; }
   .signatures { margin-top: 12mm; display: flex; gap: 10mm; page-break-inside: avoid; }
-  .signatures > div { flex: 1; border-top: 0.3mm solid #111827; padding-top: 2mm; font-size: 8.5pt; }
-  .generated { margin-top: 10mm; font-size: 8pt; color: #6b7280; }
-  .draft-note { margin-top: 4mm; border: 0.3mm solid #b91c1c; color: #b91c1c; padding: 2mm 3mm; font-size: 9pt; font-weight: 600; }
+  .signatures > div { flex: 1; border-top: 0.3mm solid #111827; padding-top: 2mm; font-size: 10pt; }
+  .generated { margin-top: 6mm; font-size: 10pt; color: #6b7280; }
+  .draft-note { margin-top: 4mm; border: 0.3mm solid #b91c1c; color: #b91c1c; padding: 2mm 3mm; font-size: 10pt; font-weight: 600; }
 `;
 
 export function documentShell(options: {
@@ -188,14 +189,21 @@ export function documentShell(options: {
 </html>`;
 }
 
-export function header(model: PdfModel, title: string) {
+export function header(
+  model: PdfModel,
+  title: string,
+  rows: { label: string; value: string | null | undefined }[],
+) {
+  // "Malaysia" is redundant on documents issued by a Malaysian company.
+  const address = model.company.addressLines.filter((line) => line.trim().toLowerCase() !== "malaysia");
+
   return html`<header class="doc-header">
   <div class="company">
     ${model.company.logoUrl ? html`<img class="logo" src="${model.company.logoUrl}" alt="" />` : ""}
     <div class="company-name">${model.company.name}</div>
     <div class="company-meta">${[
       model.company.registrationNo,
-      ...model.company.addressLines,
+      ...address,
       model.company.phone ?? "",
       model.company.email ?? "",
     ]
@@ -204,20 +212,21 @@ export function header(model: PdfModel, title: string) {
   </div>
   <div class="doc-title">
     <h1>${title}</h1>
-    <div class="doc-number">${model.number ?? "DRAFT"}</div>
+    <table class="meta-table">
+      ${raw(
+        rows
+          .filter((row) => row.value)
+          .map(
+            (row) =>
+              `<tr><td class="label">${escapeText(row.label)}</td><td class="value">${escapeText(
+                row.value ?? "",
+              )}</td></tr>`,
+          )
+          .join(""),
+      )}
+    </table>
   </div>
 </header>`;
-}
-
-export function metaTable(rows: { label: string; value: string | null | undefined }[]) {
-  return html`<table class="meta-table">
-    ${raw(
-      rows
-        .filter((row) => row.value)
-        .map((row) => `<tr><td class="label">${escapeText(row.label)}</td><td>${escapeText(row.value ?? "")}</td></tr>`)
-        .join(""),
-    )}
-  </table>`;
 }
 
 export function customerBlock(model: PdfModel, deliveryAddress?: string | null) {

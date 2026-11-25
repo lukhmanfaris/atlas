@@ -6,7 +6,6 @@ import {
   formatDate,
   header,
   lineRows,
-  metaTable,
   totals,
   type PdfModel,
 } from "./layout";
@@ -15,8 +14,7 @@ export function renderQuotation(model: PdfModel) {
   return documentShell({
     model,
     title: "QUOTATION",
-    body: html`${header(model, "QUOTATION")}
-      ${metaTable([
+    body: html`${header(model, "QUOTATION", [
         { label: "Quotation No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Valid Until", value: formatDate(model.validUntil) },

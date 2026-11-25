@@ -7,7 +7,6 @@ import {
   formatDate,
   header,
   lineRows,
-  metaTable,
   totals,
   type PdfModel,
 } from "./layout";
@@ -19,8 +18,7 @@ export function renderInvoice(model: PdfModel) {
   return documentShell({
     model,
     title: "INVOICE",
-    body: html`${header(model, "INVOICE")}
-      ${metaTable([
+    body: html`${header(model, "INVOICE", [
         { label: "Invoice No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Terms", value: terms },
@@ -46,21 +44,21 @@ export function renderInvoice(model: PdfModel) {
       ${model.amountInWords
         ? html`<div class="words"><strong>Amount in words:</strong> ${model.amountInWords}</div>`
         : ""}
-      ${model.company.bankName || model.company.bankAccountNo
-        ? html`<section class="extra">
-            <h2>Payment details</h2>
-            <p>${[model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
-              .filter(Boolean)
-              .join("\n")}</p>
-            ${model.company.paymentInstructions
-              ? html`<p style="margin-top:2mm">${model.company.paymentInstructions}</p>`
-              : ""}
-          </section>`
-        : ""}
       ${model.notes
         ? html`<section class="extra"><h2>Notes</h2><p>${model.notes}</p></section>`
         : ""}
       <div class="bottom">
+        ${model.company.bankName || model.company.bankAccountNo || model.company.paymentInstructions
+          ? html`<section class="extra">
+              <h2>Payment details</h2>
+              <p>${[model.company.bankName, model.company.bankAccountName, model.company.bankAccountNo]
+                .filter(Boolean)
+                .join("\n")}</p>
+              ${model.company.paymentInstructions
+                ? html`<p style="margin-top:2mm">${model.company.paymentInstructions}</p>`
+                : ""}
+            </section>`
+          : ""}
         ${model.variant === "draft"
           ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid invoice.</div>`
           : ""}

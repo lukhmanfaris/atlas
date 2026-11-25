@@ -5,7 +5,6 @@ import {
   formatDate,
   header,
   lineRows,
-  metaTable,
   stampBlock,
   type PdfModel,
 } from "./layout";
@@ -17,8 +16,7 @@ export function renderDeliveryOrder(model: PdfModel) {
   return documentShell({
     model,
     title: "DELIVERY ORDER",
-    body: html`${header(model, "DELIVERY ORDER")}
-      ${metaTable([
+    body: html`${header(model, "DELIVERY ORDER", [
         { label: "DO No.", value: model.number ?? "DRAFT" },
         { label: "Date", value: formatDate(model.issueDate) },
         { label: "Delivery Date", value: formatDate(model.deliveryDate) },
