@@ -17,6 +17,7 @@ import {
 import { Input } from "@/client/components/ui/input";
 import { Textarea } from "@/client/components/ui/textarea";
 import { DateField } from "../components/date-field";
+import { formatBusinessDate } from "@/shared/dates";
 import { formatRinggit } from "@/shared/items";
 import { milliToQty } from "@/shared/quantities";
 
@@ -168,7 +169,7 @@ export function QuotationViewPage({
               {document.paidAt ? <Badge>paid</Badge> : null}
             </CardTitle>
             <p className="text-sm text-muted-foreground">
-              {customer?.name ?? "Customer"} · issued {document.issueDate}
+              {customer?.name ?? "Customer"} · issued {formatBusinessDate(document.issueDate)}
             </p>
           </div>
 
@@ -272,8 +273,8 @@ export function QuotationViewPage({
           ) : null}
 
           <div className="grid gap-4 text-sm sm:grid-cols-2">
-            <Row label="Valid until" value={document.validUntil} />
-            {document.dueDate ? <Row label="Due date" value={document.dueDate} /> : null}
+            <Row label="Valid until" value={formatBusinessDate(document.validUntil)} />
+            {document.dueDate ? <Row label="Due date" value={formatBusinessDate(document.dueDate)} /> : null}
             {document.sourceNumber ? (
               <div className="flex justify-between gap-4 border-b pb-1">
                 <span className="text-muted-foreground">Quotation</span>

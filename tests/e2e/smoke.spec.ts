@@ -150,6 +150,26 @@ test("creates and issues an invoice", async ({ page }) => {
   await expect(page.getByText(/INV-\d{4}/)).toBeVisible();
 });
 
+test("shows dates as DD/MM/YYYY on the invoice page and list", async ({ page }) => {
+  const buyer = `E2E Date Format Buyer ${Date.now()}`;
+  await page.goto("/invoices");
+  await page.getByRole("button", { name: /New invoice/ }).click();
+  await page.getByPlaceholder("Customer name").fill(buyer);
+  await page.getByLabel("Billing address").fill("6 Test Road\n50000 Kuala Lumpur");
+  await page.getByLabel("Description").first().fill("Consulting");
+  await page.getByLabel("Qty").fill("1");
+  await page.getByLabel("Unit price (RM)").fill("100.00");
+  await page.getByRole("button", { name: "Save draft" }).click();
+  await expect(page).toHaveURL(/\/invoices\/[0-9a-f-]+$/);
+
+  await expect(page.getByText(new RegExp(`${buyer} · issued \\d{2}/\\d{2}/\\d{4}$`))).toBeVisible();
+  await expect(page.getByText(/^\d{4}-\d{2}-\d{2}$/)).toHaveCount(0);
+
+  await page.goto("/invoices");
+  const row = page.getByRole("row").filter({ hasText: buyer });
+  await expect(row.getByRole("cell", { name: /^\d{2}\/\d{2}\/\d{4}$/ }).first()).toBeVisible();
+});
+
 test("lets a draft delivery order pick its delivery date", async ({ page }) => {
   const [year, month, day] = new Date(Date.now() + 8 * 3_600_000)
     .toISOString()

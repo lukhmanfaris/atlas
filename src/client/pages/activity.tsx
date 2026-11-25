@@ -12,13 +12,11 @@ import {
   TableRow,
 } from "@/client/components/ui/table";
 
+import { formatMalaysiaTimestamp } from "@/shared/dates";
+
 import { listAuditLog } from "../api";
 import { SettingsTabs } from "../components/settings-tabs";
 import { useCompany } from "../company";
-
-function formatWhen(at: number): string {
-  return new Date(at + 8 * 3_600_000).toISOString().slice(0, 16).replace("T", " ");
-}
 
 export function ActivityPage() {
   const { company } = useCompany();
@@ -73,7 +71,7 @@ export function ActivityPage() {
                   {(entries.data?.entries ?? []).map((entry) => (
                     <TableRow key={entry.id}>
                       <TableCell className="whitespace-nowrap tabular-nums">
-                        {formatWhen(entry.at)}
+                        {formatMalaysiaTimestamp(entry.at)}
                       </TableCell>
                       <TableCell className="font-medium">{entry.action}</TableCell>
                       <TableCell className="hidden sm:table-cell">{entry.userEmail}</TableCell>

@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/client/components/ui/table";
+import { formatBusinessDate } from "@/shared/dates";
 import { formatRinggit } from "@/shared/items";
 
 import { listCustomers, listQuotations } from "../api";
@@ -233,8 +234,8 @@ export function QuotationsPage({ documentType = "quotation" }: { documentType?: 
                       </Link>
                     </TableCell>
                     <TableCell className="max-w-56 whitespace-normal">{row.customerName}</TableCell>
-                    <TableCell className="hidden sm:table-cell">{row.issueDate}</TableCell>
-                    <TableCell className="hidden md:table-cell">{row.validUntil ?? "—"}</TableCell>
+                    <TableCell className="hidden sm:table-cell">{formatBusinessDate(row.issueDate)}</TableCell>
+                    <TableCell className="hidden md:table-cell">{formatBusinessDate(row.validUntil)}</TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatRinggit(row.totalSen)}
                     </TableCell>
