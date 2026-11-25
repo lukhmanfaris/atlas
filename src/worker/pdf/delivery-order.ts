@@ -59,10 +59,6 @@ export function renderDeliveryOrder(model: PdfModel) {
           ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid delivery order.</div>`
           : ""}
         ${stampBlock(model)}
-        <div class="signatures">
-          <div>Issued by: name, signature and date</div>
-          <div>Received in good order and condition by: name, signature and date</div>
-        </div>
       </div>`,
   });
 }

@@ -163,6 +163,9 @@ const STYLES = `
   table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: middle; font-size: 10pt; }
   .line-details { color: #6b7280; margin-top: 1mm; }
   .num { text-align: right; white-space: nowrap; }
+  table.lines th.num { text-align: right; }
+  table.lines th.price,
+  table.lines th.qty { text-align: left; }
   .price { text-align: left; white-space: nowrap; }
   .qty { text-align: left; white-space: nowrap; }
   .totals { margin-top: 5mm; margin-left: auto; width: 70mm; padding-right: 1.5mm; }

@@ -45,10 +45,6 @@ export function renderQuotation(model: PdfModel) {
         ? html`<div class="draft-note">DRAFT — not yet issued. This preview is not a valid quotation.</div>`
         : ""}
       <div class="bottom">
-        <div class="signatures">
-          <div>Issued by: name, signature and date</div>
-          <div>Accepted by: name, signature, company stamp and date</div>
-        </div>
         <div class="generated">This is a computer-generated document. No signature is required.</div>
       </div>`,
   });
