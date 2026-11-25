@@ -65,6 +65,29 @@ CI: `npm run check` on every push; staging deploys from `main`; production deplo
 5. Run `npm run check`, then deploy to staging and describe how to check it by hand.
 6. Set the feature's `status` to `"done"` and summarise the change in one paragraph.
 7. If a decision changes the spec, update `spec.json` and add a `decision_log` entry in the same commit.
+8. Finish with the release block from *Releasing to production* below.
+
+## Releasing to production (after every app change)
+
+The owner is new to releases. Apply this to features **and** fixes, UI tweaks and PDF changes alike.
+
+**Needs a release** when the change touches `src/`, `migrations/`, `public/`, `index.html`, `wrangler.jsonc`, `vite.config.ts`, `package.json` or `package-lock.json`.
+**No release needed** for docs (`*.md`, `docs/`, `spec.json`), `tests/`, `scripts/` or `.github/`. Say "No release needed. Production doesn't change." and stop.
+
+Steps:
+
+1. `npm run check`, commit, push `main`. Wait until CI and Deploy staging are green.
+2. Pick the next version from `git tag -l 'v*' --sort=-v:refname | head -1`. A fix bumps the last digit (`v1.0.0` → `v1.0.1`); a feature bumps the middle digit and resets the last (`v1.0.1` → `v1.1.0`). Create the annotated tag locally: `git tag -a vX.Y.Z -m "vX.Y.Z: <what changed>"`.
+3. End the message with the release block below, filled in for this change.
+4. Push the tag **only** after the owner replies "push". Then confirm the run is waiting, and after approval check `npx wrangler deployments list --env production`.
+
+Release block (plain English, filled in):
+
+> **Ready to release vX.Y.Z: <one-line summary>**
+> 1. **Check staging:** open https://atlas-staging.halfxind.workers.dev → <exact clicks for this change> → you should see <expected result>.
+> 2. **Reply "push"** and I'll send `vX.Y.Z` to GitHub. (Database change included: <yes, what it does / no>.)
+> 3. **Approve:** GitHub → Actions → Deploy production → the `vX.Y.Z` run → **Review deployments** → tick `production` → **Approve and deploy**. **Reject** cancels with nothing changed.
+> 4. **Check production** after about a minute: <what to look at>.
 
 ## Always ask first
 
