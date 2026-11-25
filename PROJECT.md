@@ -1,6 +1,6 @@
 # PROJECT.md — Atlas
 
-> Last updated: 25 November 2026.
+> Last updated: 25 November 2026 (release process and backup keep-alive).
 > **Start here.** Read this file, `CLAUDE.md` and `spec.json` — you do not need to scan the codebase to understand the project.
 > `spec.json` is the source of truth for behaviour. `CLAUDE.md` holds the coding rules and commands. This file explains what exists today and why.
 
@@ -32,8 +32,9 @@ Both environments are live and behind Cloudflare Access with a one-time PIN sent
 - Team domain: `atlas-docs.cloudflareaccess.com`. The zero-trust organisation also hosts unrelated older apps — never touch their Access applications.
 - Database: D1 in `apac`, read replication off. Storage: R2, private buckets, files served only through the Worker after a membership check.
 - PDFs: Cloudflare Browser Run via `@cloudflare/puppeteer`, generated once at issue and stored in R2. `PDF_RENDERING` is **on** in staging/production and **off** locally (there is no Browser Run on a laptop; the call hangs rather than failing).
-- Tests: `npm run check` runs typecheck + lint + `178` unit/API tests; `npm run test:e2e` runs `8` Playwright flows.
-- Backups: nightly GitHub Action at 02:10 Malaysia time exports production D1 to `atlas-backups-production/backups/YYYY/MM/DD.sql.gz` (Malaysia date), gzip. A 7-year lifecycle rule (2,557 days, prefix `backups/`) deletes older copies. The restore drill has been run once (see `RESTORE.md`).
+- Tests: `npm run check` runs typecheck + lint + `184` unit/API tests; `npm run test:e2e` runs `11` Playwright flows.
+- Backups: nightly GitHub Action at 02:10 Malaysia time exports production D1 to `atlas-backups-production/backups/YYYY/MM/DD.sql.gz` (Malaysia date), gzip. A 7-year lifecycle rule (2,557 days, prefix `backups/`) deletes older copies. The restore drill has been run once (see `RESTORE.md`). The job re-enables its own schedule at the end of every run, because GitHub switches off scheduled workflows in public repos after 60 days without commits.
+- GitHub: the repo `lukhmanfaris/atlas` is **public** (free plan). Nothing secret is committed; the Cloudflare token lives in repository secrets. The GitHub `production` environment requires the owner's approval before a deploy runs.
 
 All sixteen features in `spec.json` are `done`.
 
@@ -45,6 +46,7 @@ All sixteen features in `spec.json` are `done`.
 4. Run the **parallel month** from section 10: real documents alongside the current method, with no differences.
 5. Repeat the restore drill quarterly and log it in `RESTORE.md`.
 6. Optional: the payments **ledger** (partial payments, balances) is deferred; v1 only marks an invoice paid on a date.
+7. **15 January 2027:** open GitHub → Actions → Nightly backup and confirm there is still a run every night (checks that the schedule keep-alive works past GitHub's 60-day limit).
 
 ## 4. How it is actually built
 
@@ -132,7 +134,20 @@ Recorded in full in `spec.json` → `decision_log`:
 | `npm run deploy:staging` / `:prod` | Build for that environment and deploy |
 | `npm run cf-typegen` | Regenerate bindings types after `wrangler.jsonc` changes |
 
-Production deploys are normally triggered by pushing a `v*` tag; the workflow requires manual approval through the `production` environment.
+### Releasing to production
+
+Production is released only by pushing a version tag. The GitHub workflow then runs the checks, applies migrations and deploys, in that order, after the owner approves.
+
+1. Commit and push `main`. Staging deploys automatically; check the change there.
+2. Tag the commit and push the tag (this starts the production workflow):
+   ```bash
+   git tag -a v1.0.1 -m "v1.0.1: what changed"
+   git push origin v1.0.1
+   ```
+3. GitHub → Actions → **Deploy production** → the run shows *Waiting* → **Review deployments** → tick `production` → **Approve and deploy**.
+4. The run goes green. `npx wrangler deployments list --env production` shows the new version.
+
+Version numbers: last digit for fixes (`v1.0.1`), middle digit for new features (`v1.1.0`). `npm run deploy:prod` from a laptop is for emergencies only.
 
 ## 10. Before a new chat starts work
 
@@ -149,3 +164,5 @@ Production deploys are normally triggered by pushing a `v*` tag; the workflow re
 - **Local dev has no Browser Run.** `PDF_RENDERING=off` there; issuing still succeeds and `pdf_r2_key` stays null.
 - **Seed data is local by default**; `-- --remote` writes fake rows into staging.
 - The `.wrangler` folder and `.dev.vars` are git-ignored; `worker-configuration.d.ts` is generated and committed.
+- **Do not deploy production from the laptop.** `npm run deploy:prod` skips the release record (the tag), the checks and the migration ordering. Release with a `v*` tag (section 9).
+- **Making the repo private on the free plan removes the approval step.** Required reviewers on a private repo need GitHub Pro.

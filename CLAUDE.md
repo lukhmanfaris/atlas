@@ -22,7 +22,7 @@ The owner has limited coding experience. Explain what you are about to do in pla
 | `npm run db:migrate:prod` | Apply migrations to production (ask first, every time) |
 | `npm run seed` | Fake data into local D1. `npm run seed -- --remote` targets staging |
 | `npm run deploy:staging` | Build for staging and deploy |
-| `npm run deploy:prod` | Build for production and deploy (ask first) |
+| `npm run deploy:prod` | Build for production and deploy. Emergency only, ask first; normal releases are a `v*` tag with approval (`PROJECT.md` §9) |
 | `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` after changing `wrangler.jsonc` |
 
 CI: `npm run check` on every push; staging deploys from `main`; production deploys from a `v*` tag with manual approval; nightly backup at 02:10 MYT.
