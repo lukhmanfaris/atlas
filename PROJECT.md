@@ -1,148 +1,151 @@
-# PROJECT.md: SME Invoice and Delivery Order App
+# PROJECT.md — Atlas
 
-> Last updated: 24 Nov 2026. `spec.json` is the source of truth for data model, rules and acceptance criteria. `CLAUDE.md` holds the coding rules. This file explains what we are building and why.
+> Last updated: 25 November 2026.
+> **Start here.** Read this file, `CLAUDE.md` and `spec.json` — you do not need to scan the codebase to understand the project.
+> `spec.json` is the source of truth for behaviour. `CLAUDE.md` holds the coding rules and commands. This file explains what exists today and why.
 
-## 1. What we are building
+## 1. What this is
 
-An internal web app for a small Malaysian business group. It produces branded **quotations, invoices and delivery orders** for several companies, and stores every issued document as a PDF for 7 years.
+An internal web app for **HALFX INDUSTRIES** (and any future sister companies) that issues
 
-The main flow is **quotation → invoice → one or more delivery orders**. Each company has its own logo, registration number, bank details and document numbering.
+**quotations → invoices → delivery orders**
 
-## 2. Who uses it
+as branded A4 PDFs, and keeps every issued document for seven years.
 
-- 1–5 internal staff, on laptops and phones.
-- Two roles: **owner** (settings, users, voiding) and **staff** (day-to-day documents).
-- Customers never log in. They receive PDFs, which staff download and send from their own mailbox in v1.
+- 1–5 internal staff. No customer logins; PDFs are downloaded and sent from staff mailboxes.
+- Two roles per company: **owner** (settings, members, voiding, export) and **staff** (day-to-day documents).
+- Several companies, each with its own logo, registration number, bank details, numbering and customers. A company switcher separates them completely.
 
-## 3. Decisions so far
+## 2. Current state
 
-| Topic | Decision | Reason |
+Both environments are live and behind Cloudflare Access with a one-time PIN sent to `halfxindustries@gmail.com`.
+
+| | Staging | Production |
 | --- | --- | --- |
-| Hosting | Cloudflare Workers, cloud only | Near-zero cost, nothing to maintain |
-| Database | Cloudflare D1 (SQLite), location hint `apac` | One vendor, $0, simplest for an AI-assisted build |
-| Files | Cloudflare R2 (logos, issued PDFs, backups) | 10 GB free, no egress fees |
-| Login | Cloudflare Access, email one-time PIN | Free for up to 50 users, no password code to write |
-| PDFs | HTML templates rendered by Cloudflare Browser Run | Same template for preview and PDF |
-| SST | Not registered, so no SST on documents | Title is **INVOICE**, never TAX INVOICE |
-| MyInvois | Not mandatory (all companies under RM3 million) | Fields reserved so it can be added later |
-| Currency | MYR only | No foreign-currency invoicing today |
-| Email | Deferred to next phase | Mailbox and domain not chosen yet |
-| Spec format | PROJECT.md + CLAUDE.md + spec.json | Readable for people, precise for the agent |
+| URL | https://atlas-staging.halfxind.workers.dev | https://atlas-production.halfxind.workers.dev |
+| Purpose | testing, fake data | real business records |
+| D1 | `atlas-staging` | `atlas-production` |
+| R2 | `atlas-files-staging`, `atlas-backups-staging` | `atlas-files-production`, `atlas-backups-production` |
+| Data | demo companies and one restored test quotation | HALFX INDUSTRIES, owner account |
 
-## 4. Scope
+- Access is **Worker-level** (Workers → the Worker → Access → All traffic). Each Worker has its own audience tag, so a staging session cannot be replayed against production. There is no custom domain; the `workers.dev` address is the app.
+- Team domain: `atlas-docs.cloudflareaccess.com`. The zero-trust organisation also hosts unrelated older apps — never touch their Access applications.
+- Database: D1 in `apac`, read replication off. Storage: R2, private buckets, files served only through the Worker after a membership check.
+- PDFs: Cloudflare Browser Run via `@cloudflare/puppeteer`, generated once at issue and stored in R2. `PDF_RENDERING` is **on** in staging/production and **off** locally (there is no Browser Run on a laptop; the call hangs rather than failing).
+- Tests: `npm run check` runs typecheck + lint + `157` unit/API tests; `npm run test:e2e` runs `8` Playwright flows.
+- Backups: nightly GitHub Action at 02:10 Malaysia time exports production D1 to `atlas-backups-production/backups/YYYY/MM/DD.sql.gz` (Malaysia date), gzip. A 7-year lifecycle rule (2,557 days, prefix `backups/`) deletes older copies. The restore drill has been run once (see `RESTORE.md`).
 
-**In v1**
+All sixteen features in `spec.json` are `done`.
 
-- Company profiles with logo, bank details, numbering prefixes and default terms. Several companies, with a switcher.
-- Customers and items (catalogue), per company.
-- Quotations: draft, issue, accept, reject, void, and convert to invoice.
-- Invoices: draft, issue, void.
-- Delivery orders: created from an issued invoice, with partial deliveries, issue, mark delivered, void.
-- A4 PDFs with logo, stored once at issue.
-- Lists, search, dashboard, audit log, nightly backups and CSV export.
+## 3. What is left — human work, no code
 
-**Not in v1:** payments, expenses and reports, email sending, signed-DO upload, SST, MyInvois, foreign currency, customer portal, inventory, Bahasa Malaysia UI.
+1. Finish the company profile in **Settings → Company**: address lines, logo, bank details, **payment instructions**, prefixes.
+2. Enter real **customers** and **items** in production.
+3. Create a **draft quotation** and download its PDF on production — this is the only path the automated tests cannot cover (Browser Run). A draft uses no number and can be deleted.
+4. Run the **parallel month** from section 10: real documents alongside the current method, with no differences.
+5. Repeat the restore drill quarterly and log it in `RESTORE.md`.
+6. Optional: the payments **ledger** (partial payments, balances) is deferred; v1 only marks an invoice paid on a date.
 
-## 5. Document workflow
+## 4. How it is actually built
+
+| Layer | What is used | Note |
+| --- | --- | --- |
+| Runtime | One Cloudflare Worker serving the React SPA and `/api` | `src/worker/index.ts` |
+| API | Hono 4 + Zod 4 | Validation schemas in `src/shared` |
+| Frontend | React 19 + Vite 8 + React Router 8 + TanStack Query 5 + Tailwind 4 + shadcn/ui | Components under `src/client/components/ui` |
+| Database | D1 (SQLite) + Drizzle ORM, drizzle-kit migrations | `src/worker/db/schema.ts`, `migrations/` |
+| Files | R2 `FILES` (logos, PDFs) and `BACKUPS` | Logo inlined as a data URI in PDFs |
+| Auth | Cloudflare Access JWT validated on every `/api` request | `src/worker/auth/` |
+| PDF | Hono `html` templates → `@cloudflare/puppeteer` | `src/worker/pdf/` |
+| Tests | Vitest 5 with `@cloudflare/vitest-plugin`, Playwright | D1 migrations applied per test file |
+| CI/CD | GitHub Actions: check on push, staging from `main`, production on a `v*` tag, nightly backup | `.github/workflows/` |
+
+**Deviations from the original plan, deliberately:**
+- Templates use Hono's `html` tag, not Hono JSX — two JSX runtimes in one Vite project do not coexist cleanly.
+- `@cloudflare/vitest-pool-workers` was renamed upstream to `@cloudflare/vitest-plugin`.
+- No custom domain; Worker-level Access protects the `workers.dev` address.
+- Browser Run is switched off locally and on in deployed environments.
+
+## 5. The rules that matter
+
+- **Money is integer sen**; quantities are integer thousandths. Round half up per line, then sum. Both API and editor share `src/shared/totals.ts`.
+- **Company scope**: every company row is filtered by `company_id`, taken from `X-Company-Id` for API calls or from the document/company being addressed. Another company's record is a `404`.
+- **Issued documents are immutable.** Drafts are editable and deletable. Corrections after issue: owner voids with a reason, then a new document is issued. A voided document keeps its number.
+- **Numbers never reset and are gap-free**: `INV-1042`, `QT-1001`, `DO-1001` — prefix, dash, sequence starting at **1000**, per company and per document type. The year is recorded on the document but not printed.
+- **Delivery orders never carry money** in the API, the editor or the PDF.
+- **No SST** while `companies.sst_registered = 0`; title is INVOICE, never TAX INVOICE.
+- **Typed customers**: a document can be created by typing a buyer's name. Exact (case-insensitive) match reuses the customer; otherwise a customer is created with its billing address when the draft saves.
+- **Paid** is a date on the invoice (`paid_at`), set by staff or owner; it does not alter the stored PDF.
+
+## 6. Document workflow
 
 ```
- Quotation ──convert──▶ Invoice ──create DO──▶ Delivery order #1 (partial)
- (draft→issued→          (draft→issued→void)  ──create DO──▶ Delivery order #2 (rest)
-  accepted/rejected/void)                        (draft→issued→delivered / void)
+Quotation ──convert──▶ Invoice ──create DO──▶ Delivery order #1 (partial)
+(draft→issued→void)    (draft→issued→void)  ──create DO──▶ Delivery order #2 (rest)
+                                              (draft→issued→delivered / void)
 ```
 
-Key rules (full detail in `spec.json` → `state_machines`, `numbering`, `calculations`):
+- Converting an issued quotation creates a draft invoice with the same customer, lines, discounts, notes and terms, sets `source_document_id` and per-line `source_line_id`, and marks the quotation **accepted**. A second conversion is blocked while a non-void invoice exists.
+- Delivery orders are created only from an **issued** invoice, prefilled with the remaining quantity per line. Over-delivery is refused on save and again at issue. Voiding a DO returns its quantities.
+- An invoice cannot be voided while a non-void delivery order points at it.
+- The dashboard shows drafts, the 10 latest issued documents, and invoices still awaiting delivery.
 
-1. **Drafts** can be edited and deleted. They have no number.
-2. **Issuing** assigns the next number (e.g. `INV-2026-0042`), freezes the customer and company details, and stores the PDF with its SHA-256 hash.
-3. **Issued documents never change.** Mistakes are fixed by voiding (owner only, with a reason) and issuing a new document. A voided document keeps its number.
-4. **Numbers are gap-free** per company, document type and year, and restart at 0001 each January.
-5. **Delivery orders** come only from issued invoices. They show quantities, not prices. The app tracks remaining quantity per invoice line, so several partial DOs can never exceed the invoice.
-6. An invoice cannot be voided while it has delivery orders that are not void.
-7. **Money** is stored in whole sen, and quantities in thousandths, so totals are exact.
+## 7. Where things live
 
-## 6. Compliance notes
-
-- **SST:** no company is registered. Documents must not charge or show SST. Tax columns exist in the database with value 0, so registering later is a settings change.
-- **Record keeping:** keep issued documents and PDFs for 7 years. Never hard-delete an issued document.
-- **PDPA:** the Act applies to customer contact details, but the obligations for a business this size are light. Collect only what documents need, keep the app behind Access, accept vendor data-processing terms, keep a one-page note of where data is stored, and publish a short privacy notice. A data protection officer is required only above 20,000 data subjects.
-- **MyInvois:** not mandatory below RM3 million annual revenue (including related companies). Re-check if revenue grows.
-
-## 7. Architecture
-
-```
- Staff browser ──▶ Cloudflare Access (email PIN)
-                        │
-                        ▼
-        ┌─────────────── Cloudflare Worker ───────────────┐
-        │  React app (static assets)  │  Hono API /api/*  │
-        └───────┬──────────────┬───────────────┬──────────┘
-                ▼              ▼               ▼
-          D1 database     R2 bucket       Browser Run
-          (apac hint)   (logos, PDFs)   (HTML → PDF)
-
- GitHub Actions ── nightly `wrangler d1 export` ──▶ R2 backup bucket (kept 7 years)
-```
-
-| Layer | Choice |
+| Path | What |
 | --- | --- |
-| Frontend | React, Vite, TypeScript, React Router, TanStack Query, Tailwind CSS, shadcn/ui |
-| API | Hono on Workers, Zod validation shared with the client |
-| Data | D1 with Drizzle ORM and drizzle-kit migrations |
-| Files | R2: `FILES` bucket (logos, PDFs), `BACKUPS` bucket |
-| Auth | Cloudflare Access; the Worker validates `Cf-Access-Jwt-Assertion` on every API call |
-| PDF | Hono JSX templates → Browser Run (`@cloudflare/puppeteer`) |
-| Tests | Vitest with `@cloudflare/vitest-pool-workers`; Playwright for key flows |
-| CI/CD | GitHub Actions: check on push, staging from `main`, production on a version tag |
+| `src/worker/index.ts` | Hono app: mounts `/api/*`, serves the SPA |
+| `src/worker/auth/` | Access JWT check, app user, company membership, owner guard |
+| `src/worker/routes/` | `me`, `companies`, `members`, `customers`, `items`, `documents`, `document-pdf`, `audit`, `export` |
+| `src/worker/services/` | `totals`, `amount-in-words`, `dates`, `numbering`, `documents` (snapshots/model), `pdf`, `delivery`, `audit` |
+| `src/worker/db/` | `schema.ts`, `client.ts`, helpers that take `companyId` first |
+| `src/worker/pdf/` | `layout`, `quotation`, `invoice`, `delivery-order` |
+| `src/shared/` | Zod schemas and types used by both sides |
+| `src/client/` | React app: `pages/`, `components/ui` (shadcn), `api.ts`, `company.tsx` |
+| `migrations/` | Generated SQL — never edit an applied migration |
+| `tests/worker/` | Vitest API/service tests; `tests/e2e/` Playwright |
+| `RESTORE.md` | Time Travel and export restore, drill log |
 
-**Free-tier limits the code must respect:** 100,000 requests/day and 10 ms CPU per request. D1 allows 500 MB per database, 100,000 rows written/day, 50 queries per request (a batch counts as one) and 100 parameters per query. Browser Run gives 10 browser-minutes a day. At 1–5 users this leaves a wide margin.
+## 8. Decisions that changed the original plan
 
-## 8. Data model (summary)
+Recorded in full in `spec.json` → `decision_log`:
 
-`companies` · `users` · `company_members` · `customers` · `items` · `documents` (quotation, invoice, delivery order) · `document_lines` · `number_sequences` · `audit_log`
+- Worker-level Cloudflare Access on `workers.dev`, no custom domain.
+- Document numbers `PREFIX-1000+`, no year, never reset; **random numbers rejected** because they break gap-free numbering and auditability.
+- `reference` removed everywhere (the owner does not use customer PO numbers).
+- Manual accept/reject removed; **conversion implies acceptance**.
+- Customers can be typed on a document instead of picked first.
+- Items live under **Settings → Items**, keeping the bottom bar short: Home · Customers · Quotes · Invoices · Settings.
+- Simple **paid date** instead of a payments ledger (deferred).
+- Item SKUs auto-assign by category: `MCH-001`, `PRT-001`, `CTRL-001`, editable, per company.
 
-Every table except `users` carries `company_id`, and every query is filtered by the current company. Full field lists are in `spec.json` → `entities`.
+## 9. Environments and commands
 
-## 9. Milestones
+| Command | Does |
+| --- | --- |
+| `npm run dev` | Local app with local D1/R2; Access bypass for `DEV_AUTH_EMAIL`; PDF rendering off |
+| `npm run check` | Typecheck, lint, all Vitest tests |
+| `npm run test:e2e` | Playwright against local dev |
+| `npm run db:generate` | New SQL migration from the Drizzle schema |
+| `npm run db:migrate:local` / `:staging` / `:prod` | Apply migrations (`:staging`/`:prod` are remote) |
+| `npm run seed` | Fake data into local D1 (`-- --remote` targets staging) |
+| `npm run deploy:staging` / `:prod` | Build for that environment and deploy |
+| `npm run cf-typegen` | Regenerate bindings types after `wrangler.jsonc` changes |
 
-| Milestone | Features (ids in spec.json) | Done when |
-| --- | --- | --- |
-| **M0 Foundations** | F-00 scaffold and deploy | Hello page live on staging behind Access; CI green |
-| **M1 Master data** | F-01 users and roles · F-02 companies and logo · F-03 customers · F-04 items | Two test companies with logos, customers and items on staging |
-| **M2 Documents** | F-05 numbering · F-06 PDFs · F-07 quotations · F-08 invoices · F-09 convert · F-10 delivery orders | Quotation → invoice → two partial DOs works with correct PDFs |
-| **M3 Go-live** | F-11 lists and dashboard · F-12 audit log · F-13 backups · F-14 CSV export | Restore drill passed, privacy notice published, one month running alongside the current method without differences |
+Production deploys are normally triggered by pushing a `v*` tag; the workflow requires manual approval through the `production` environment.
 
-Rough effort, part-time and AI-assisted: M0 1–2 weeks, M1 2 weeks, M2 3–4 weeks, M3 1–2 weeks plus the month-long parallel run.
+## 10. Before a new chat starts work
 
-## 10. Environments
+1. Confirm the feature statuses in `spec.json` — everything is `done`; new work needs a new feature entry.
+2. Read `CLAUDE.md` for the hard rules (money, company scope, immutability, numbering).
+3. Do not run `db:migrate:prod`, `deploy:prod`, or any remote destructive command without explicit approval.
+4. Check `RESTORE.md` before any data operation you might need to undo.
 
-| Environment | What | Data |
-| --- | --- | --- |
-| local | `npm run dev` with local D1 and R2 | Seeded fake data |
-| staging | Own Worker, D1 and R2, behind Access | Fake data only |
-| production | Own Worker, D1 and R2, behind Access | Real data |
+## 11. Traps worth knowing
 
-## 11. Security and backups
-
-- Access in front of everything; the `workers.dev` address is disabled; JWT checked on every API call.
-- Roles checked in the API, not only hidden in the UI.
-- Private R2 buckets; files served only through the Worker after a membership check.
-- D1 Time Travel restores to any point in the last 7 days (Free plan).
-- Nightly export to the backup bucket, kept 7 years. The owner downloads one copy a month to a computer in Malaysia.
-- Restore drill before go-live, then every quarter (`RESTORE.md`).
-
-## 12. Running cost
-
-$0/month on free tiers at this size, plus the domain. Upgrade to Workers Paid ($5/month) when email sending or MyInvois is added.
-
-## 13. Working with the coding agent
-
-1. Put `PROJECT.md`, `CLAUDE.md` and `spec.json` in the root of an empty repository.
-2. Start the agent and paste the kickoff prompt from `spec.json` → `agent_instructions.kickoff_prompt`.
-3. For each next feature, use `agent_instructions.feature_prompt_template` with the feature id, e.g. *"Implement F-05 (Document numbering service) from spec.json…"*.
-4. Review each feature on staging before moving on. The agent marks the feature `done` in `spec.json`.
-5. When you change your mind about a rule, tell the agent to update `spec.json` and add a `decision_log` entry, in the same change.
-
-## 14. Next phase (after go-live)
-
-Payment tracking, email sending (needs a sending domain and Workers Paid), signed-DO photo upload, expenses and reports. SST and MyInvois only if registration or revenue requires them.
+- **Download links** (`/api/documents/:id/pdf`, `/preview`, `/api/export/documents.csv`) are plain browser navigations, so they authorise by **document id or `company_id` query parameter** plus membership. They must never require `X-Company-Id`.
+- **Backup filenames** use the Malaysia date; the workflow runs at 02:10 MYT.
+- **Restoring an export** can fail with `FOREIGN KEY constraint failed` because statements are grouped by table; insert parents first (`users → companies → company_members → customers → items → documents → document_lines → audit_log`).
+- **Local dev has no Browser Run.** `PDF_RENDERING=off` there; issuing still succeeds and `pdf_r2_key` stays null.
+- **Seed data is local by default**; `-- --remote` writes fake rows into staging.
+- The `.wrangler` folder and `.dev.vars` are git-ignored; `worker-configuration.d.ts` is generated and committed.

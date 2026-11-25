@@ -1,5 +1,9 @@
 # Invoice Web App — Solution Architecture & Product Plan
 
+> **Historical document.** This holds the research and reasoning from 24 November 2026, before the build.
+> The system has since been built and deployed, and some decisions changed (no custom domain, Worker-level Access, no reference field, no manual accept/reject, `PREFIX-1000+` numbering, a simple paid date instead of a payments ledger).
+> **For current state read `PROJECT.md`; for behaviour read `spec.json`; for code rules read `CLAUDE.md`.**
+
 Nov 24, 2026 · @Lukhman Faris
 
 ## Summary

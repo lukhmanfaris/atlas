@@ -1,6 +1,6 @@
 {
   "spec_version": "1.0.0",
-  "updated": "2026-11-24",
+  "updated": "2026-11-25",
 
   "agent_instructions": {
     "role": "You are the senior full-stack engineer building this app together with the owner, who has limited coding experience. Explain what you are about to do in plain language before running commands or changing the data model.",
@@ -32,6 +32,15 @@
       "money_display": "RM 1,234.50"
     },
     "hosting": "Cloud only (Cloudflare). Local machine is for development only."
+  },
+
+  "current_state": {
+    "updated": "2026-11-25",
+    "status": "Every feature F-00 to F-15 is done. Production is live; what remains is human work: finishing the company profile, entering real data, one PDF spot-check on production, and the month-long parallel run.",
+    "production_url": "https://atlas-production.halfxind.workers.dev",
+    "staging_url": "https://atlas-staging.halfxind.workers.dev",
+    "auth": "Worker-level Cloudflare Access on the workers.dev address, one-time PIN, allow-list halfxindustries@gmail.com. Team domain atlas-docs.cloudflareaccess.com; each Worker has its own audience tag, so staging sessions cannot be replayed against production.",
+    "notes": "Descriptive only. Behaviour is defined by the sections below, not here."
   },
 
   "business_context": {
@@ -763,6 +772,7 @@
     { "date": "2026-11-24", "decision": "Quotations have no manual accept or reject step", "why": "Nothing gates on acceptance, and converting to an invoice already implies it. Statuses are draft, issued, void, with accepted set only by conversion" },
     { "date": "2026-11-24", "decision": "Items live under Settings, not in the bottom bar", "why": "The catalogue is set up rarely; the bar stays short: Home, Quotes, Settings, with Invoices added in F-08" },
     { "date": "2026-11-24", "decision": "A document can be created from a typed customer name instead of picking one", "why": "Staff know the buyer's name before they have a customer record. The name is matched case-insensitively, reused when it matches exactly, and otherwise a customer is created when the draft is first saved" },
-    { "date": "2026-11-25", "decision": "v1 marks an invoice paid with a chosen date; a payments ledger is deferred", "why": "The owner needs a simple paid marker now. Partial payments, methods and balances need a payments table, which changes the data model and the invoice totals story, so it stays in the next phase" }
+    { "date": "2026-11-25", "decision": "v1 marks an invoice paid with a chosen date; a payments ledger is deferred", "why": "The owner needs a simple paid marker now. Partial payments, methods and balances need a payments table, which changes the data model and the invoice totals story, so it stays in the next phase" },
+    { "date": "2026-11-25", "decision": "PROJECT.md and CLAUDE.md rewritten to describe the built system, not the plan", "why": "A new chat must be able to start from three documents instead of scanning the code. spec.json remains the source of truth for behaviour" }
   ]
 }
