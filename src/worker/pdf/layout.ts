@@ -172,6 +172,7 @@ const STYLES = `
   .totals .rule { border-top: 0.4mm solid #111827; }
   .totals-line { display: flex; justify-content: space-between; width: 70mm; margin-left: auto; padding: 1.2mm 1.5mm 1.2mm 0; font-size: 10pt; }
   .totals-line.grand { font-weight: 700; }
+  .totals-words { width: 70mm; margin-left: auto; padding: 1.5mm 1.5mm 0 0; text-align: center; font-size: 10pt; }
   .words { margin-top: 4mm; font-size: 10pt; }
   .words strong { text-transform: uppercase; letter-spacing: 0.04em; }
   section.extra { margin-top: 5mm; page-break-inside: avoid; }
@@ -179,7 +180,7 @@ const STYLES = `
   section.extra p { margin: 0; white-space: pre-line; font-size: 10pt; line-height: 1.35; }
   .signatures { margin-top: 12mm; display: flex; gap: 10mm; page-break-inside: avoid; }
   .signatures > div { flex: 1; border-top: 0.3mm solid #111827; padding-top: 2mm; font-size: 10pt; }
-  .generated { margin-top: 6mm; font-size: 10pt; color: #6b7280; }
+  .generated { margin-top: 4mm; font-size: 8px; color: #6b7280; text-align: right; }
   .draft-note { margin-top: 4mm; border: 0.3mm solid #b91c1c; color: #b91c1c; padding: 2mm 3mm; font-size: 10pt; font-weight: 600; }
 `;
 
@@ -314,6 +315,9 @@ export function totals(model: PdfModel) {
       : ""}
     <div class="rule"></div>
     <div class="totals-line grand"><span>Total (RM)</span><span>${formatMoney(model.totalSen)}</span></div>
+    ${model.amountInWords
+      ? html`<div class="totals-words">${model.amountInWords}</div>`
+      : ""}
   </div>`;
 }
 

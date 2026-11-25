@@ -40,9 +40,6 @@ export function renderInvoice(model: PdfModel) {
       </table>
       ${totals(model)}
       <div class="bottom">
-        ${model.amountInWords
-          ? html`<div class="words"><strong>Amount in words:</strong> ${model.amountInWords}</div>`
-          : ""}
         ${model.company.bankName ||
         model.company.bankAccountNo ||
         model.company.paymentInstructions ||

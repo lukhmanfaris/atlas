@@ -35,9 +35,6 @@ export function renderQuotation(model: PdfModel) {
         </tbody>
       </table>
       ${totals(model)}
-      ${model.amountInWords
-        ? html`<div class="words"><strong>Amount in words:</strong> ${model.amountInWords}</div>`
-        : ""}
       ${model.terms
         ? html`<section class="extra"><h2>Terms and conditions</h2><p>${model.terms}</p></section>`
         : ""}

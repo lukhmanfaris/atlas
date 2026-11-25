@@ -87,7 +87,7 @@ describe("document templates", () => {
     expect(html).toContain("Maju Jaya Sdn Bhd");
     expect(html).toContain("A4 Copier Paper");
     expect(html).toContain("58.75");
-    expect(html).toContain("Amount in words");
+    expect(html).toContain("RINGGIT MALAYSIA");
     expect(html).not.toContain("TAX INVOICE");
     expect(html).not.toContain("SST");
   });
