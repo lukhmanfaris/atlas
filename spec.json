@@ -648,7 +648,7 @@
       "title": "Lists, search and dashboard",
       "milestone": "M3",
       "priority": "should",
-      "status": "todo",
+      "status": "done",
       "depends_on": ["F-07", "F-08", "F-10"],
       "acceptance_criteria": [
         "Each document list filters by status, customer and date range, and searches by number or customer name.",
