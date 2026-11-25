@@ -1,10 +1,9 @@
 name: Nightly backup
 
 on:
-  # Enable the schedule once atlas-production and atlas-backups-production exist.
-  # schedule:
-  #   # 18:10 UTC = 02:10 Malaysia time
-  #   - cron: "10 18 * * *"
+  schedule:
+    # 18:10 UTC = 02:10 Malaysia time
+    - cron: "10 18 * * *"
   workflow_dispatch:
     inputs:
       target:
@@ -24,7 +23,7 @@ jobs:
   export:
     runs-on: ubuntu-latest
     env:
-      TARGET: ${{ inputs.target || 'staging' }}
+      TARGET: ${{ inputs.target || 'production' }}
     steps:
       - uses: actions/checkout@v4
 

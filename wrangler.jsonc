@@ -68,14 +68,14 @@
         "ENVIRONMENT": "production",
         "PDF_RENDERING": "on",
         "DEV_AUTH_EMAIL": "",
-        "ACCESS_TEAM_DOMAIN": "",
-        "ACCESS_AUD": ""
+        "ACCESS_TEAM_DOMAIN": "https://atlas-docs.cloudflareaccess.com",
+        "ACCESS_AUD": "373eda10899e6bb1ce3109b837829260bf45015ddd4e707acaa7c23dbfc61960"
       },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "atlas-production",
-          "database_id": "00000000-0000-4000-8000-000000000003",
+          "database_id": "3001fc12-ec74-4e60-8ff8-79ebf81c3678",
           "migrations_dir": "migrations"
         }
       ],
