@@ -362,7 +362,7 @@
       "DO numbers may have gaps, by design: an invoice with no delivery order leaves its digits unused. Quotation and invoice numbers stay gap-free.",
       "The number has no year or month; the date lives in issue_date and seq_year is still recorded for reporting.",
       "A number is assigned only when a draft is issued. Drafts have no number.",
-      "Numbers are gap-free: deleting a draft never uses up a number, and a voided document keeps its number.",
+      "Quotation and invoice numbers are gap-free: deleting a draft never uses up a number. A voided document of any type keeps its number.",
       "seq grows past 9999 without breaking (it is padded to at least 4 digits).",
       "Changing a prefix in settings affects only documents issued afterwards.",
       "The number is a business convention, not a sales report: it starts high so low volume is not advertised. It stays consecutive and auditable."
