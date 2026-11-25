@@ -160,7 +160,9 @@ const STYLES = `
     border-bottom: 0.4mm solid #111827;
     padding: 2mm 1.5mm;
   }
-  table.lines td { padding: 2mm 1.5mm; border-bottom: 0.2mm solid #e5e7eb; vertical-align: middle; font-size: 10pt; }
+  table.lines td { padding: 2mm 1.5mm; vertical-align: middle; font-size: 10pt; }
+  table.lines.single tr td { border-bottom: none; }
+  table.lines.multi tr:not(:last-child) td { border-bottom: 0.3mm solid #111827; }
   .line-details { color: #6b7280; margin-top: 1mm; }
   .num { text-align: right; white-space: nowrap; }
   table.lines th.num { text-align: right; }
@@ -191,7 +193,8 @@ const STYLES = `
   section.extra p { margin: 0; white-space: pre-line; font-size: 10pt; line-height: 1.35; }
   .signatures { margin-top: 12mm; display: flex; gap: 10mm; page-break-inside: avoid; }
   .signatures > div { flex: 1; border-top: 0.3mm solid #111827; padding-top: 2mm; font-size: 10pt; }
-  .generated { margin-top: 4mm; font-size: 8px; color: #6b7280; text-align: right; }
+  .generated { margin-top: 4mm; font-size: 8px; color: #6b7280; text-align: left; }
+  @media print { .generated { display: none; } }
   .draft-note { margin-top: 4mm; border: 0.3mm solid #b91c1c; color: #b91c1c; padding: 2mm 3mm; font-size: 10pt; font-weight: 600; }
 `;
 

@@ -20,7 +20,7 @@ export function renderQuotation(model: PdfModel) {
         { label: "Valid Until", value: formatDate(model.validUntil) },
       ])}
       ${customerBlock(model)}
-      <table class="lines with-prices">
+      <table class="lines with-prices ${model.lines.length > 1 ? "multi" : "single"}">
         <thead>
           <tr>
             <th>No.</th>

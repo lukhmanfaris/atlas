@@ -2,7 +2,17 @@ import { renderDocumentHtml } from "@/worker/pdf";
 
 import { loadDocument } from "./documents";
 
-export type PdfRenderer = (html: string) => Promise<Uint8Array>;
+export type PdfRenderer = (
+  html: string,
+  options?: { footerNote?: string },
+) => Promise<Uint8Array>;
+
+const GENERATED_NOTE =
+  "This is a computer-generated document. No signature is required.";
+
+function footerNoteFor(model: { type: string }): string {
+  return model.type === "delivery_order" ? "" : GENERATED_NOTE;
+}
 
 export type PdfDeps = {
   d1: D1Database;
@@ -56,7 +66,9 @@ export async function ensureStoredPdf(
     return { key: row.pdf_r2_key, created: false };
   }
 
-  const bytes = await deps.render(renderDocumentHtml(model).toString());
+  const bytes = await deps.render(renderDocumentHtml(model).toString(), {
+    footerNote: footerNoteFor(model),
+  });
   const year = Number(row.issue_date.slice(0, 4));
   const key = pdfKey(input.companyId, row.type, year, number);
   const sha256 = await sha256Hex(bytes);
@@ -99,6 +111,7 @@ export async function ensureVoidPdf(
 
   const bytes = await deps.render(
     renderDocumentHtml({ ...model, variant: "void" }).toString(),
+    { footerNote: footerNoteFor(model) },
   );
   const year = Number(row.issue_date.slice(0, 4));
   const key = voidPdfKey(input.companyId, row.type, year, number);
@@ -141,7 +154,9 @@ export async function ensurePaidPdf(
     return { key: row.paid_pdf_r2_key, created: false };
   }
 
-  const bytes = await deps.render(renderDocumentHtml({ ...model, paid: true }).toString());
+  const bytes = await deps.render(renderDocumentHtml({ ...model, paid: true }).toString(), {
+    footerNote: footerNoteFor(model),
+  });
   const year = Number(row.issue_date.slice(0, 4));
   const key = paidPdfKey(input.companyId, row.type, year, number);
   const sha256 = await sha256Hex(bytes);
@@ -170,7 +185,9 @@ export async function renderUnstoredPdf(
   if (!loaded) {
     return null;
   }
-  return deps.render(renderDocumentHtml(loaded.model).toString());
+  return deps.render(renderDocumentHtml(loaded.model).toString(), {
+    footerNote: footerNoteFor(loaded.model),
+  });
 }
 
 /**
@@ -178,7 +195,7 @@ export async function renderUnstoredPdf(
  * Browser Run outage never blocks issuing a document.
  */
 export function puppeteerRenderer(env: Env): PdfRenderer {
-  return async (html) => {
+  return async (html, options) => {
     const { default: puppeteer } = await import("@cloudflare/puppeteer");
     const browser = await puppeteer.launch(env.BROWSER);
 
@@ -190,8 +207,10 @@ export function puppeteerRenderer(env: Env): PdfRenderer {
         printBackground: true,
         displayHeaderFooter: true,
         headerTemplate: "<span></span>",
-        footerTemplate:
-          '<div style="width:100%;padding:0 15mm;font-size:8px;color:#6b7280;text-align:right">Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>',
+        footerTemplate: `<div style="width:100%;padding:0 15mm;font-size:8px;color:#6b7280;display:flex;justify-content:space-between">
+          <span>${options?.footerNote ?? ""}</span>
+          <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+        </div>`,
         margin: { top: "15mm", right: "15mm", bottom: "18mm", left: "15mm" },
       });
       return new Uint8Array(buffer);
