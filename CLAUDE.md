@@ -47,7 +47,7 @@ CI: `npm run check` on every push; staging deploys from `main`; production deplo
 2. **Company scope:** every company row is filtered by `company_id`. Data helpers take `companyId` first. Another company's record returns `404`.
 3. **Auth on every `/api` route:** validate the Access JWT (signature, issuer, audience, expiry). Owner-only actions check the role server-side.
 4. **Issued documents are immutable.** Only drafts are editable or deletable. Corrections: owner voids with a reason, then a new document. A void keeps its number.
-5. **Numbers only from `services/numbering.ts`**: `PREFIX-1000+`, gap-free, never reset, assigned inside one `db.batch`. Never compute a number in a route or the client.
+5. **Numbers only from `services/numbering.ts`**: `PREFIX-1000+`, gap-free, never reset, assigned inside one `db.batch`. Delivery orders take their invoice's digits (`DO-1042`, `DO-1042-2`). Never compute a number in a route or the client.
 6. **Delivery orders never expose money** — not in the API response, the editor or the PDF.
 7. **No SST** while `sst_registered = 0`: title INVOICE, no tax lines, `tax_sen = 0`.
 8. **Validate every request body with Zod** from `src/shared`; reject unknown fields.

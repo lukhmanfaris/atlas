@@ -26,7 +26,7 @@ Both environments are live and behind Cloudflare Access with a one-time PIN sent
 | Purpose | testing, fake data | real business records |
 | D1 | `atlas-staging` | `atlas-production` |
 | R2 | `atlas-files-staging`, `atlas-backups-staging` | `atlas-files-production`, `atlas-backups-production` |
-| Data | demo companies and one restored test quotation | HALFX INDUSTRIES, owner account |
+| Data | demo companies and one restored test quotation | HALFX INDUSTRIES and Waffl Works Services, owner account, customers and items; no documents yet (test documents cleared 25 November 2026) |
 
 - Access is **Worker-level** (Workers → the Worker → Access → All traffic). Each Worker has its own audience tag, so a staging session cannot be replayed against production. There is no custom domain; the `workers.dev` address is the app.
 - Team domain: `atlas-docs.cloudflareaccess.com`. The zero-trust organisation also hosts unrelated older apps — never touch their Access applications.
@@ -71,7 +71,7 @@ All sixteen features in `spec.json` are `done`.
 - **Money is integer sen**; quantities are integer thousandths. Round half up per line, then sum. Both API and editor share `src/shared/totals.ts`.
 - **Company scope**: every company row is filtered by `company_id`, taken from `X-Company-Id` for API calls or from the document/company being addressed. Another company's record is a `404`.
 - **Issued documents are immutable.** Drafts are editable and deletable. Corrections after issue: owner voids with a reason, then a new document is issued. A voided document keeps its number.
-- **Numbers never reset and are gap-free**: `INV-1042`, `QT-1001`, `DO-1001` — prefix, dash, sequence starting at **1000**, per company and per document type. The year is recorded on the document but not printed.
+- **Quotations and invoices use per-company, per-type gap-free counters that never reset**, starting at **1000** (`INV-1042`, `QT-1001`). Delivery orders take their invoice's digits (`DO-1042`, then `DO-1042-2`), so they can have gaps. The year is recorded on the document but not printed.
 - **Delivery orders never carry money** in the API, the editor or the PDF.
 - **No SST** while `companies.sst_registered = 0`; title is INVOICE, never TAX INVOICE.
 - **Typed customers**: a document can be created by typing a buyer's name. Exact (case-insensitive) match reuses the customer; otherwise a customer is created with its billing address when the draft saves.
