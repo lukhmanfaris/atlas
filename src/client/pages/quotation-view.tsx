@@ -353,10 +353,12 @@ export function QuotationViewPage({
               <span className="text-muted-foreground">Subtotal</span>
               <span className="tabular-nums">{formatRinggit(document.subtotalSen)}</span>
             </p>
-            <p className="flex justify-between">
-              <span className="text-muted-foreground">Discount</span>
-              <span className="tabular-nums">{formatRinggit(document.discountSen)}</span>
-            </p>
+            {document.discountSen ? (
+              <p className="flex justify-between">
+                <span className="text-muted-foreground">Discount</span>
+                <span className="tabular-nums">{formatRinggit(document.discountSen)}</span>
+              </p>
+            ) : null}
             <p className="flex justify-between border-t pt-1 font-semibold">
               <span>Total</span>
               <span className="tabular-nums">{formatRinggit(document.totalSen)}</span>

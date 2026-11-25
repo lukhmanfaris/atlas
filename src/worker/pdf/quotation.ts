@@ -25,7 +25,7 @@ export function renderQuotation(model: PdfModel) {
           <tr>
             <th>No.</th>
             <th>Description</th>
-            <th class="price">Unit Price (RM)</th>
+            <th class="price">U.Price (RM)</th>
             <th class="qty">Qty</th>
             <th class="num">Amount (RM)</th>
           </tr>

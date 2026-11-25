@@ -30,7 +30,7 @@ export function renderInvoice(model: PdfModel) {
           <tr>
             <th>No.</th>
             <th>Description</th>
-            <th class="price">Unit Price (RM)</th>
+            <th class="price">U.Price (RM)</th>
             <th class="qty">Qty</th>
             <th class="num">Amount (RM)</th>
           </tr>
@@ -54,7 +54,7 @@ export function renderInvoice(model: PdfModel) {
                 .filter(Boolean)
                 .join("\n")}</p>
               ${model.company.paymentInstructions
-                ? html`<p style="margin-top:2mm">${model.company.paymentInstructions}</p>`
+                ? html`<p>${model.company.paymentInstructions}</p>`
                 : ""}
             </section>`
           : ""}

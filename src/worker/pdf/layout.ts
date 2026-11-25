@@ -129,10 +129,10 @@ const STYLES = `
   .doc-logo img.logo,
   .company img.logo { max-height: 22mm; max-width: 55mm; width: auto; height: auto; object-fit: contain; display: block; }
   .company-name { font-size: 13pt; font-weight: 700; line-height: 1.15; }
-  .company-meta { font-size: 10pt; color: #4b5563; white-space: pre-line; }
+  .company-meta { font-size: 10pt; line-height: 1.35; color: #4b5563; white-space: pre-line; }
       .doc-number { font-size: 11pt; font-weight: 600; }
   .meta-table { margin-top: 6mm; width: 100%; border-collapse: collapse; }
-  .meta-table td { padding: 0.6mm 0; vertical-align: top; font-size: 10pt; }
+  .meta-table td { padding: 0; line-height: 1.35; vertical-align: top; font-size: 10pt; }
   .meta-table td.label { color: #6b7280; padding-right: 4mm; text-align: right; }
   .meta-table td.value { text-align: right; }
   .customer-block { margin-top: 6mm; display: flex; gap: 8mm; }
@@ -165,7 +165,7 @@ const STYLES = `
   .num { text-align: right; white-space: nowrap; }
   .price { text-align: left; white-space: nowrap; }
   .qty { text-align: left; white-space: nowrap; }
-  .totals { margin-top: 5mm; margin-left: auto; width: 70mm; }
+  .totals { margin-top: 5mm; margin-left: auto; width: 70mm; padding-right: 1.5mm; }
   .totals table { width: 100%; border-collapse: collapse; }
   .totals td { padding: 1.2mm 0; font-size: 10pt; }
   .totals td.amount { text-align: right; white-space: nowrap; }
@@ -174,7 +174,7 @@ const STYLES = `
   .words strong { text-transform: uppercase; letter-spacing: 0.04em; }
   section.extra { margin-top: 5mm; page-break-inside: avoid; }
   section.extra h2 { font-size: 10pt; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin: 0 0 1mm; }
-  section.extra p { margin: 0; white-space: pre-line; font-size: 10pt; }
+  section.extra p { margin: 0; white-space: pre-line; font-size: 10pt; line-height: 1.35; }
   .signatures { margin-top: 12mm; display: flex; gap: 10mm; page-break-inside: avoid; }
   .signatures > div { flex: 1; border-top: 0.3mm solid #111827; padding-top: 2mm; font-size: 10pt; }
   .generated { margin-top: 6mm; font-size: 10pt; color: #6b7280; }
