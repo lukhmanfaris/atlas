@@ -99,7 +99,7 @@ describe("document templates", () => {
 
     expect(html).toContain("DELIVERY ORDER");
     expect(html).toContain("Item Code");
-    expect(html).toContain("Received in good order");
+    expect(html).not.toContain("Received in good order");
     expect(html).not.toContain("Unit Price");
     expect(html).not.toContain("Total (RM)");
     expect(html).not.toContain("23.50");
